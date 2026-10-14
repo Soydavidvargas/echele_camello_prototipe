@@ -16,3 +16,28 @@
   font-variant-numeric: tabular-nums;
 }
 
+@utility scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@keyframes camello-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@utility animate-in {
+  animation: camello-fade-in 150ms ease-out both;
+}
+
+@utility fade-in {
+  --tw-fade-in: 1;
+}
+

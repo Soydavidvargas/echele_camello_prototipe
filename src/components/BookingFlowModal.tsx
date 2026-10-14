@@ -25,8 +25,12 @@ interface BookingFlowModalProps {
   onJobCreated: (newJob: ActiveJob) => void;
 }
 
-export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({
-  isOpen,
+export const BookingFlowModal: React.FC<BookingFlowModalProps> = (props) => {
+  if (!props.isOpen) return null;
+  return <BookingFlowContent {...props} />;
+};
+
+const BookingFlowContent: React.FC<BookingFlowModalProps> = ({
   onClose,
   technician,
   presetService,
@@ -34,7 +38,6 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({
   defaultCityName,
   onJobCreated,
 }) => {
-  if (!isOpen) return null;
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 

@@ -1,9 +1,10 @@
 import React from 'react';
 import { Wrench, ShieldCheck, Heart } from 'lucide-react';
+import { CategoryId } from '../types';
 
 interface FooterProps {
   onOpenGuarantee: () => void;
-  onSelectCategory: (cat: any) => void;
+  onSelectCategory: (cat: CategoryId) => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({ onOpenGuarantee, onSelectCategory }) => {

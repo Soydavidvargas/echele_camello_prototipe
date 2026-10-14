@@ -58,9 +58,15 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
       </div>
 
       {/* Horizontal scroller on mobile, clean flex-wrap on desktop */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+      <div
+        role="group"
+        aria-label="Filtrar por oficio"
+        className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none"
+      >
         <button
+          type="button"
           onClick={() => onSelectCategory('all')}
+          aria-pressed={selectedCategory === 'all'}
           className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer shrink-0 border ${
             selectedCategory === 'all'
               ? 'bg-[#0f172a] text-white border-[#0f172a] shadow-sm'
@@ -75,8 +81,10 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
           const isSelected = selectedCategory === cat.id;
           return (
             <button
+              type="button"
               key={cat.id}
               onClick={() => onSelectCategory(cat.id)}
+              aria-pressed={isSelected}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer shrink-0 border ${
                 isSelected
                   ? 'bg-[#ea580c] text-white border-[#ea580c] shadow-sm'
