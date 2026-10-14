@@ -1,0 +1,6 @@
+{
+  "name": "Échele Camello",
+  "description": "Plataforma de técnicos certificados, maestros de obra y servicios del hogar en Neiva (Huila) y Colombia con Garantía Camello y pago protegido.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
