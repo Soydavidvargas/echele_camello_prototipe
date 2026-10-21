@@ -121,4 +121,25 @@ export interface AvailableOpportunity {
   offerCOP: number;
   urgency: 'alta' | 'media' | 'normal';
   postedAgo: string;
+  clientName?: string;
+  clientPhone?: string;
+}
+
+export interface WorkerAd {
+  id: string;
+  technicianName: string;
+  title: string;
+  category: CategoryId;
+  categoryName: string;
+  neighborhood: string;
+  city: string;
+  phone: string;
+  startingPriceCOP: number;
+  rating: number;
+  completedJobs: number;
+  features: string[];
+  isGoldVip: boolean;
+  paymentMethod: 'llave_nequi' | 'llave_daviplata' | 'transferencia_bancaria';
+  paymentReference: string;
+  createdAt: string;
 }

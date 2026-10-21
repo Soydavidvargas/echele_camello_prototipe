@@ -22,12 +22,12 @@ interface HeaderProps {
   onSelectTab: (tab: 'browse' | 'active_jobs' | 'worker_mode' | 'guarantee') => void;
   activeJobsCount: number;
   onOpenEmergency: () => void;
+  onOpenNeedWorker: () => void;
   isWorkerMode: boolean;
   onToggleWorkerMode: () => void;
   currentUser: UserSession | null;
   onOpenAuth: () => void;
   onLogout: () => void;
-  onShow3DIntro?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -37,13 +37,13 @@ export const Header: React.FC<HeaderProps> = ({
   activeTab,
   onSelectTab,
   activeJobsCount,
-  onOpenEmergency,
+  onOpenEmergency: _onOpenEmergency,
+  onOpenNeedWorker,
   isWorkerMode,
   onToggleWorkerMode,
   currentUser,
   onOpenAuth,
   onLogout,
-  onShow3DIntro,
 }) => {
   const selectedCityObj = cities.find((c) => c.id === currentCity) || cities[0];
 
@@ -70,15 +70,6 @@ export const Header: React.FC<HeaderProps> = ({
               480+ técnicos verificados en{' '}
               <strong className="text-white font-semibold">{selectedCityObj.name}</strong>
             </span>
-            {onShow3DIntro && (
-              <button
-                onClick={onShow3DIntro}
-                className="hidden lg:flex items-center gap-1 text-[11px] text-[#ffaa00] hover:underline ml-2 cursor-pointer"
-              >
-                <Sparkles className="w-3 h-3" />
-                <span>Ver Intro 3D</span>
-              </button>
-            )}
           </div>
 
           <div className="flex items-center gap-2.5 sm:gap-4">
@@ -157,8 +148,9 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             </div>
 
-            {/* Zone 2: Apple Segmented Pill Navigation */}
+            {/* Zone 2: Segmented Navigation */}
             <nav aria-label="Secciones principales" className="hidden md:flex items-center bg-[#000000]/[0.05] dark:bg-white/[0.08] p-1 rounded-full border border-black/[0.04] dark:border-white/[0.06]">
+              {/* En Web Trabajador: "Explorar Clientes" | En Web Cliente: "Explorar Técnicos" */}
               <button
                 onClick={() => onSelectTab('browse')}
                 aria-current={activeTab === 'browse' ? 'page' : undefined}
@@ -168,26 +160,30 @@ export const Header: React.FC<HeaderProps> = ({
                     : 'text-[#6e6e73] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-white'
                 }`}
               >
-                Explorar Técnicos
+                {isWorkerMode ? 'Explorar Clientes' : 'Explorar Técnicos'}
               </button>
 
-              <button
-                onClick={() => onSelectTab('active_jobs')}
-                aria-current={activeTab === 'active_jobs' ? 'page' : undefined}
-                className={`relative px-4 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
-                  activeTab === 'active_jobs'
-                    ? 'bg-white dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] scale-[1.01]'
-                    : 'text-[#6e6e73] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-white'
-                }`}
-              >
-                <span>Mi Camello</span>
-                {activeJobsCount > 0 && (
-                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold text-white bg-[#c2410c] rounded-full tabular-nums shadow-xs">
-                    {activeJobsCount}
-                  </span>
-                )}
-              </button>
+              {/* "Mi Camello": Solo en web trabajador */}
+              {isWorkerMode && (
+                <button
+                  onClick={() => onSelectTab('active_jobs')}
+                  aria-current={activeTab === 'active_jobs' ? 'page' : undefined}
+                  className={`relative px-4 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
+                    activeTab === 'active_jobs'
+                      ? 'bg-white dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] scale-[1.01]'
+                      : 'text-[#6e6e73] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-white'
+                  }`}
+                >
+                  <span>Mi Camello</span>
+                  {activeJobsCount > 0 && (
+                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold text-white bg-[#c2410c] rounded-full tabular-nums shadow-xs">
+                      {activeJobsCount}
+                    </span>
+                  )}
+                </button>
+              )}
 
+              {/* Garantía Camello: En ambas webs */}
               <button
                 onClick={() => onSelectTab('guarantee')}
                 aria-current={activeTab === 'guarantee' ? 'page' : undefined}
@@ -201,21 +197,24 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>Garantía Camello</span>
               </button>
 
-              <button
-                onClick={() => onSelectTab('worker_mode')}
-                aria-current={activeTab === 'worker_mode' ? 'page' : undefined}
-                className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
-                  activeTab === 'worker_mode'
-                    ? 'bg-white dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] scale-[1.01]'
-                    : 'text-[#6e6e73] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-white'
-                }`}
-              >
-                <HardHat className="w-3.5 h-3.5 text-[#ff9500]" />
-                <span>Panel Técnico</span>
-              </button>
+              {/* "Panel Técnico": Solo en web trabajador */}
+              {isWorkerMode && (
+                <button
+                  onClick={() => onSelectTab('worker_mode')}
+                  aria-current={activeTab === 'worker_mode' ? 'page' : undefined}
+                  className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
+                    activeTab === 'worker_mode'
+                      ? 'bg-white dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] scale-[1.01]'
+                      : 'text-[#6e6e73] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-white'
+                  }`}
+                >
+                  <HardHat className="w-3.5 h-3.5 text-[#ff9500]" />
+                  <span>Panel Técnico</span>
+                </button>
+              )}
             </nav>
 
-            {/* Zone 3: Accessibility Menu + User Auth + Emergency Button */}
+            {/* Zone 3: Accessibility Menu + User Auth + Action Button */}
             <div className="flex items-center gap-2 sm:gap-3">
               {/* Accessibility Dropdown */}
               <AccessibilityMenu />
@@ -245,15 +244,17 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
               )}
 
-              {/* Urgent CTA Button */}
-              <button
-                onClick={onOpenEmergency}
-                className="apple-pill-primary px-3.5 sm:px-4 py-1.5 text-xs font-semibold rounded-full flex items-center gap-1.5 cursor-pointer whitespace-nowrap shadow-xs"
-              >
-                <AlertCircle className="w-3.5 h-3.5 text-white" />
-                <span className="hidden sm:inline">Urgencia 24/7 (30 min)</span>
-                <span className="sm:hidden">Urgencia</span>
-              </button>
+              {/* Botón de Acción: En web cliente muestra "Necesito Camellador"; en web trabajador NO aparece */}
+              {!isWorkerMode && (
+                <button
+                  onClick={onOpenNeedWorker}
+                  className="apple-pill-primary px-3.5 sm:px-4 py-1.5 text-xs font-semibold rounded-full flex items-center gap-1.5 cursor-pointer whitespace-nowrap shadow-md bg-gradient-to-r from-[#ea580c] to-[#c2410c] hover:brightness-110 active:scale-95 transition-all text-white border border-orange-400/30"
+                >
+                  <span className="text-sm">📢</span>
+                  <span className="hidden sm:inline">Necesito Camellador</span>
+                  <span className="sm:hidden">Pedir Camello</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

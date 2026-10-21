@@ -11,6 +11,7 @@ export interface UserSession {
   role: 'client' | 'worker' | 'admin';
   city: string;
   avatar_url?: string;
+  phone?: string;
 }
 
 export interface ClientRegistrationPayload {

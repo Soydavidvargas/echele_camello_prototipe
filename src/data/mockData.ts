@@ -1,4 +1,4 @@
-import { CityInfo, Category, Technician, ActiveJob, AvailableOpportunity } from '../types';
+import { CityInfo, Category, Technician, ActiveJob, AvailableOpportunity, WorkerAd } from '../types';
 
 export const CITIES: CityInfo[] = [
   {
@@ -526,6 +526,8 @@ export const AVAILABLE_OPPORTUNITIES: AvailableOpportunity[] = [
     offerCOP: 65000,
     urgency: 'alta',
     postedAgo: 'Hace 5 min',
+    clientName: 'Dra. Marcela Andrade',
+    clientPhone: '314 892 1102',
   },
   {
     id: 'opp-2',
@@ -539,6 +541,8 @@ export const AVAILABLE_OPPORTUNITIES: AvailableOpportunity[] = [
     offerCOP: 80000,
     urgency: 'alta',
     postedAgo: 'Hace 11 min',
+    clientName: 'Ing. Carlos Dussán',
+    clientPhone: '318 402 7715',
   },
   {
     id: 'opp-3',
@@ -552,6 +556,8 @@ export const AVAILABLE_OPPORTUNITIES: AvailableOpportunity[] = [
     offerCOP: 60000,
     urgency: 'alta',
     postedAgo: 'Hace 16 min',
+    clientName: 'Andrea Palomino',
+    clientPhone: '310 551 9832',
   },
   {
     id: 'opp-4',
@@ -565,5 +571,64 @@ export const AVAILABLE_OPPORTUNITIES: AvailableOpportunity[] = [
     offerCOP: 70000,
     urgency: 'normal',
     postedAgo: 'Hace 28 min',
+    clientName: 'Don Fabio Perdomo',
+    clientPhone: '321 774 0921',
+  },
+];
+
+export const SPONSORED_ADS: WorkerAd[] = [
+  {
+    id: 'ad-gold-1',
+    technicianName: 'Don Jairo Alfonso Silva',
+    title: 'Plomero Maestro 24 Horas · Destapes con Sonda Eléctrica Ridgid',
+    category: 'plomeria',
+    categoryName: 'Plomería & Fugas',
+    neighborhood: 'Ipanema & Quirinal',
+    city: 'Neiva (Huila)',
+    phone: '312 458 9210',
+    startingPriceCOP: 45000,
+    rating: 4.98,
+    completedJobs: 384,
+    features: ['Llegada en 25 min', 'Garantía escrita 30 días', 'Pago Nequi/Daviplata'],
+    isGoldVip: true,
+    paymentMethod: 'llave_nequi',
+    paymentReference: 'NQ-GOLD-84920',
+    createdAt: 'Activo hace 2 días',
+  },
+  {
+    id: 'ad-gold-2',
+    technicianName: 'Wilson Arbey Perdomo',
+    title: 'Cerrajería de Emergencia 24/7 · Aperturas Sin Dañar Pintura ni Vidrios',
+    category: 'cerrajeria',
+    categoryName: 'Cerrajería 24/7',
+    neighborhood: 'Toda la ciudad',
+    city: 'Neiva (Huila)',
+    phone: '318 642 9011',
+    startingPriceCOP: 50000,
+    rating: 4.95,
+    completedJobs: 219,
+    features: ['Apertura chapas de seguridad', 'Duplicados con chip', 'Motos y Residencias'],
+    isGoldVip: true,
+    paymentMethod: 'llave_daviplata',
+    paymentReference: 'DP-VIP-11928',
+    createdAt: 'Activo hoy',
+  },
+  {
+    id: 'ad-gold-3',
+    technicianName: 'Luis Carlos Quintero',
+    title: 'Técnico Electricista Conte · Mantenimiento e Instalación de Aires Acondicionados',
+    category: 'electricidad',
+    categoryName: 'Electricidad',
+    neighborhood: 'Las Ceibas, Altico, Cándido',
+    city: 'Neiva (Huila)',
+    phone: '311 932 4018',
+    startingPriceCOP: 65000,
+    rating: 4.92,
+    completedJobs: 175,
+    features: ['Tarjeta CONTE vigente', 'Carga de gas R410A', 'Revisión fugas de energía'],
+    isGoldVip: true,
+    paymentMethod: 'transferencia_bancaria',
+    paymentReference: 'TR-BC-908231',
+    createdAt: 'Activo hace 4 días',
   },
 ];

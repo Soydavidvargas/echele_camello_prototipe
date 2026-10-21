@@ -27,6 +27,7 @@ import {
   TECHNICIANS as FALLBACK_TECHNICIANS,
   INITIAL_ACTIVE_JOB,
   AVAILABLE_OPPORTUNITIES as FALLBACK_OPPORTUNITIES,
+  SPONSORED_ADS,
 } from './data/mockData';
 import { setAuthCookie, getAuthCookie, deleteAuthCookie } from './data/colombiaData';
 import {
@@ -37,6 +38,7 @@ import {
   ActiveJob,
   JobStatus,
   AvailableOpportunity,
+  WorkerAd,
 } from './types';
 import { Header } from './components/Header';
 import { UrgentBanner } from './components/UrgentBanner';
@@ -48,25 +50,48 @@ import { ActiveJobTracker } from './components/ActiveJobTracker';
 import { WorkerModeView } from './components/WorkerModeView';
 import { GuaranteeModal } from './components/GuaranteeModal';
 import { Footer } from './components/Footer';
-import { FirstTimeCamelLoader } from './components/FirstTimeCamelLoader';
+import { CamelCanvasLoader } from './components/CamelCanvasLoader';
 import { ElCamelloBot } from './components/ElCamelloBot';
 import { RoleSwitchFloatingButton } from './components/RoleSwitchFloatingButton';
 import { WorkerUpgradeModal } from './components/WorkerUpgradeModal';
 import { AuthModal } from './components/AuthModal';
 import { Home } from './components/Home';
+import { NeedWorkerModal } from './components/NeedWorkerModal';
+import { GoldenAdsSection } from './components/GoldenAdsSection';
+import { ExploreClientsView } from './components/ExploreClientsView';
 import { apiService, UserSession } from './services/api';
 
 const gridContainer = staggerContainer(0.12);
+
 
 const TOKEN_KEY = 'echele_camello_token';
 const USER_KEY = 'echele_camello_user';
 const VISITED_KEY = 'echele_camello_visited';
 
 export default function App() {
-  // 1. First-time visitor 3D Camel check
-  const [show3DIntro, setShow3DIntro] = useState<boolean>(() => {
-    return !localStorage.getItem(VISITED_KEY);
+  // 1. Loading de pantalla completa con diseño Canvas del camello (para primerizos, post-login y cambio de rol)
+  const [fullScreenLoader, setFullScreenLoader] = useState<{
+    title: string;
+    subtitle: string;
+    onComplete?: () => void;
+  } | null>(() => {
+    const isFirstTime = !localStorage.getItem(VISITED_KEY);
+    if (isFirstTime) {
+      return {
+        title: '¡Bienvenido a Échele Camello!',
+        subtitle: 'Dignificando la mano de obra colombiana con tecnología, garantía y seguridad.',
+      };
+    }
+    return null;
   });
+
+  const showCamelLoader = (title: string, subtitle: string, onComplete?: () => void) => {
+    setFullScreenLoader({
+      title,
+      subtitle,
+      onComplete,
+    });
+  };
 
   // 2. Authentication & Session State with Random Hash Routing
   const [currentUser, setCurrentUser] = useState<UserSession | null>(() => {
@@ -94,25 +119,57 @@ export default function App() {
 
   // Navigation & Location: Recuerda si estaba en trabajador o cliente por cookies
   const [currentCity, setCurrentCity] = useState<CityId>('neiva');
+  const [activeMode, setActiveMode] = useState<'client' | 'worker'>(() => {
+    const savedMode = (getAuthCookie('ec_active_mode') || localStorage.getItem('ec_active_mode')) as 'client' | 'worker';
+    return savedMode === 'worker' ? 'worker' : 'client';
+  });
+  const isWorkerMode = activeMode === 'worker';
+
   const [activeTab, setActiveTab] = useState<'browse' | 'active_jobs' | 'worker_mode' | 'guarantee'>(() => {
     const savedMode = getAuthCookie('ec_active_mode') || localStorage.getItem('ec_active_mode');
     if (savedMode === 'worker') return 'worker_mode';
     return 'browse';
   });
 
+  // Client Web Sub-nav: (Anuncios) vs (Buscar Camellos)
+  const [clientSubTab, setClientSubTab] = useState<'anuncios' | 'buscar_camellos'>('buscar_camellos');
+
   // Search & Filters
   const [selectedCategory, setSelectedCategory] = useState<CategoryId | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [onlyAvailableNow, setOnlyAvailableNow] = useState(false);
   const [sortBy, setSortBy] = useState<'recommended' | 'price_low' | 'speed'>('recommended');
+  
+  // Filtros de cobros de $20.000 a $10.000.000 COP y Locación
+  const [minPriceCOP, setMinPriceCOP] = useState<number>(20000);
+  const [maxPriceCOP, setMaxPriceCOP] = useState<number>(10000000);
+  const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('all');
 
-  // Data from MySQL / API
+  // Data from MySQL / API & LocalStorage
   const [techniciansList, setTechniciansList] = useState<Technician[]>(FALLBACK_TECHNICIANS);
   const [activeJobs, setActiveJobs] = useState<ActiveJob[]>([INITIAL_ACTIVE_JOB]);
   const [selectedJobId, setSelectedJobId] = useState<string>(INITIAL_ACTIVE_JOB.id);
-  const [opportunities, setOpportunities] = useState<AvailableOpportunity[]>(FALLBACK_OPPORTUNITIES);
+  const [opportunities, setOpportunities] = useState<AvailableOpportunity[]>(() => {
+    try {
+      const saved = localStorage.getItem('echele_camello_opportunities');
+      return saved ? JSON.parse(saved) : FALLBACK_OPPORTUNITIES;
+    } catch {
+      return FALLBACK_OPPORTUNITIES;
+    }
+  });
+
+  // Anuncios Patrocinados para la Sección Dorada
+  const [workerAds, setWorkerAds] = useState<WorkerAd[]>(() => {
+    try {
+      const saved = localStorage.getItem('echele_camello_worker_ads');
+      return saved ? JSON.parse(saved) : SPONSORED_ADS;
+    } catch {
+      return SPONSORED_ADS;
+    }
+  });
 
   // Modals
+  const [isNeedWorkerModalOpen, setIsNeedWorkerModalOpen] = useState(false);
   const [selectedTechModal, setSelectedTechModal] = useState<Technician | null>(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [bookingTechnician, setBookingTechnician] = useState<Technician | null>(null);
@@ -275,28 +332,34 @@ export default function App() {
     }
   }, [sessionToken, currentUser, activeTab]);
 
-  // Auth Success Handler: Guarda cookies persistentes de sesión y rol
+  // Auth Success Handler: Muestra loading del camello y guarda cookies persistentes
   const handleLoginSuccess = (user: UserSession, token: string, role: 'client' | 'worker') => {
-    setCurrentUser(user);
-    setShowLanding(false);
-    setSessionToken(token);
-    localStorage.setItem(TOKEN_KEY, token);
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
-    localStorage.setItem('ec_active_mode', role);
+    showCamelLoader(
+      'Iniciando sesión segura...',
+      `¡Bienvenido de nuevo, ${user.name}! Cargando tus datos y garantías...`,
+      () => {
+        setCurrentUser(user);
+        setShowLanding(false);
+        setSessionToken(token);
+        localStorage.setItem(TOKEN_KEY, token);
+        localStorage.setItem(USER_KEY, JSON.stringify(user));
+        localStorage.setItem('ec_active_mode', role);
 
-    // Guardar cookies para no volver a pedir login
-    setAuthCookie('ec_user_session', token);
-    setAuthCookie('ec_active_mode', role);
-    setAuthCookie('ec_user_role', role);
-    setAuthCookie('ec_logged_in', 'true');
-    setAuthCookie(`ec_registered_${role}`, 'true');
+        // Guardar cookies para no volver a pedir login
+        setAuthCookie('ec_user_session', token);
+        setAuthCookie('ec_active_mode', role);
+        setAuthCookie('ec_user_role', role);
+        setAuthCookie('ec_logged_in', 'true');
+        setAuthCookie(`ec_registered_${role}`, 'true');
 
-    window.location.hash = `#/${role}/${token}`;
-    if (role === 'worker') {
-      setActiveTab('worker_mode');
-    } else {
-      setActiveTab('browse');
-    }
+        window.location.hash = `#/${role}/${token}`;
+        if (role === 'worker') {
+          setActiveTab('worker_mode');
+        } else {
+          setActiveTab('browse');
+        }
+      }
+    );
   };
 
   // Logout Handler: Limpia localStorage y cookies
@@ -318,8 +381,11 @@ export default function App() {
   // Landing: entrar como cliente o trabajador (requiere login)
   const handleEnterAs = (role: 'client' | 'worker') => {
     if (currentUser) {
-      setActiveTab(role === 'worker' ? 'worker_mode' : 'browse');
-      setShowLanding(false);
+      if (role === 'worker') {
+        handleSwitchToWorker();
+      } else {
+        handleSwitchToClient();
+      }
       return;
     }
     setAuthDefaultRole(role);
@@ -341,28 +407,35 @@ export default function App() {
     return false;
   }, [currentUser]);
 
-  // Cambiar a Modo Cliente desde trabajador: CONSERVA INTACTO el perfil de trabajador y guarda cookies
+  // Cambiar a Modo Cliente desde trabajador: Muestra loading del camello, conserva perfil y guarda cookies
   const handleSwitchToClient = () => {
-    setActiveTab('browse');
-    setShowLanding(false);
+    showCamelLoader(
+      'Cambiando a Modo Cliente...',
+      'Tu perfil de técnico permanece 100% activo. Cargando catálogo de servicios...',
+      () => {
+        setActiveMode('client');
+        setActiveTab('browse');
+        setShowLanding(false);
 
-    // Guardar cookies para mantener la sesión y el modo activo sin volver a pedir login
-    setAuthCookie('ec_active_mode', 'client');
-    if (sessionToken) {
-      setAuthCookie('ec_user_session', sessionToken);
-      setAuthCookie('ec_logged_in', 'true');
-    }
-    setAuthCookie('ec_registered_client', 'true');
-    localStorage.setItem('ec_active_mode', 'client');
+        // Guardar cookies para mantener la sesión y el modo activo sin volver a pedir login
+        setAuthCookie('ec_active_mode', 'client');
+        if (sessionToken) {
+          setAuthCookie('ec_user_session', sessionToken);
+          setAuthCookie('ec_logged_in', 'true');
+        }
+        setAuthCookie('ec_registered_client', 'true');
+        localStorage.setItem('ec_active_mode', 'client');
 
-    setToastNotification({
-      title: '🛒 Modo Cliente Activado',
-      message: 'Puedes buscar y contratar servicios. Tu perfil de técnico sigue 100% activo y guardado en cookies.',
-      type: 'client',
-    });
+        setToastNotification({
+          title: '🛒 Modo Cliente Activado',
+          message: 'Puedes buscar y contratar servicios. Tu perfil de técnico sigue 100% activo y guardado en cookies.',
+          type: 'client',
+        });
+      }
+    );
   };
 
-  // Cambiar a Modo Trabajador desde cliente: guarda cookies
+  // Cambiar a Modo Trabajador desde cliente: Muestra loading del camello y guarda cookies
   const handleSwitchToWorker = () => {
     if (!currentUser) {
       setAuthDefaultRole('worker');
@@ -371,62 +444,108 @@ export default function App() {
     }
 
     if (hasWorkerProfile) {
-      // Ya tiene perfil completado: cambio instantáneo sin volver a pedir requisitos
-      setActiveTab('worker_mode');
-      setShowLanding(false);
+      // Ya tiene perfil completado: cambio con loading del camello Canvas
+      showCamelLoader(
+        'Cambiando a Modo Trabajador...',
+        'Sintonizando radar de camellos y solicitudes en tiempo real...',
+        () => {
+          setActiveMode('worker');
+          setActiveTab('browse'); // Lleva a "Explorar Clientes"
+          setShowLanding(false);
 
-      // Guardar cookies para mantener la sesión y el modo trabajador sin volver a pedir login
-      setAuthCookie('ec_active_mode', 'worker');
-      if (sessionToken) {
-        setAuthCookie('ec_user_session', sessionToken);
-        setAuthCookie('ec_logged_in', 'true');
-      }
-      setAuthCookie('ec_registered_worker', 'true');
-      localStorage.setItem('ec_active_mode', 'worker');
+          // Guardar cookies para mantener la sesión y el modo trabajador sin volver a pedir login
+          setAuthCookie('ec_active_mode', 'worker');
+          if (sessionToken) {
+            setAuthCookie('ec_user_session', sessionToken);
+            setAuthCookie('ec_logged_in', 'true');
+          }
+          setAuthCookie('ec_registered_worker', 'true');
+          localStorage.setItem('ec_active_mode', 'worker');
 
-      setToastNotification({
-        title: '💼 Panel de Técnico Activado',
-        message: '¡Bienvenido de vuelta! Estás listo para recibir solicitudes y aceptar camellos.',
-        type: 'worker',
-      });
+          setToastNotification({
+            title: '💼 Modo Trabajador Activado',
+            message: '¡Bienvenido! Estás en Explorar Clientes para aceptar solicitudes y gestionar tus anuncios dorados.',
+            type: 'worker',
+          });
+        }
+      );
     } else {
       // Es cliente y aún no ha completado los requisitos de técnico: abrir modal de actualización
       setIsWorkerUpgradeModalOpen(true);
     }
   };
 
-  // Callback al completar requisitos de trabajador desde la cuenta de cliente
+  // Callback al completar requisitos de trabajador desde la cuenta de cliente: con loading del camello
   const handleWorkerUpgradeSuccess = (upgradedUser: UserSession, token: string) => {
-    setCurrentUser(upgradedUser);
-    localStorage.setItem(USER_KEY, JSON.stringify(upgradedUser));
-    const finalToken = token || sessionToken;
-    if (finalToken) {
-      setSessionToken(finalToken);
-      localStorage.setItem(TOKEN_KEY, finalToken);
-      setAuthCookie('ec_user_session', finalToken);
-    }
+    showCamelLoader(
+      '¡Habilitando Perfil de Técnico!',
+      'Requisitos verificados con éxito. Configurando tu radar de camellos...',
+      () => {
+        setCurrentUser(upgradedUser);
+        localStorage.setItem(USER_KEY, JSON.stringify(upgradedUser));
+        const finalToken = token || sessionToken;
+        if (finalToken) {
+          setSessionToken(finalToken);
+          localStorage.setItem(TOKEN_KEY, finalToken);
+          setAuthCookie('ec_user_session', finalToken);
+        }
 
-    // Guardar cookies persistentes completas
-    setAuthCookie('ec_active_mode', 'worker');
-    setAuthCookie('ec_user_role', 'worker');
-    setAuthCookie('ec_registered_worker', 'true');
-    setAuthCookie('ec_logged_in', 'true');
-    localStorage.setItem('ec_active_mode', 'worker');
-    localStorage.setItem('ec_registered_worker', 'true');
+        // Guardar cookies persistentes completas
+        setActiveMode('worker');
+        setAuthCookie('ec_active_mode', 'worker');
+        setAuthCookie('ec_user_role', 'worker');
+        setAuthCookie('ec_registered_worker', 'true');
+        setAuthCookie('ec_logged_in', 'true');
+        localStorage.setItem('ec_active_mode', 'worker');
+        localStorage.setItem('ec_registered_worker', 'true');
 
-    setActiveTab('worker_mode');
-    setShowLanding(false);
+        setActiveTab('browse'); // Explorar Clientes
+        setShowLanding(false);
+        setToastNotification({
+          title: '🎉 ¡Perfil de Trabajador Activado!',
+          message: 'Tus requisitos fueron verificados y guardados en cookies. Ahora puedes prestar tus servicios sin perder tu cuenta de cliente.',
+          type: 'worker',
+        });
+      }
+    );
+  };
+
+  // Handler: Cliente crea nueva solicitud con "Necesito Camellador"
+  const handleCreateClientRequest = (opp: AvailableOpportunity) => {
+    setOpportunities((prev) => {
+      const updated = [opp, ...prev];
+      try {
+        localStorage.setItem('echele_camello_opportunities', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
     setToastNotification({
-      title: '🎉 ¡Perfil de Trabajador Activado!',
-      message: 'Tus requisitos fueron verificados y guardados en cookies. Ahora puedes prestar tus servicios sin perder tu cuenta de cliente.',
+      title: '📢 Solicitud Publicada',
+      message: '¡Tu necesidad ya está en el radar de los trabajadores! Te contactarán pronto.',
+      type: 'client',
+    });
+  };
+
+  // Handler: Trabajador publica un anuncio pagado en la Sección Dorada VIP
+  const handlePublishAd = (ad: WorkerAd) => {
+    setWorkerAds((prev) => {
+      const updated = [ad, ...prev];
+      try {
+        localStorage.setItem('echele_camello_worker_ads', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+    setToastNotification({
+      title: '⭐ Anuncio Dorado VIP Activado',
+      message: 'Tu anuncio ya está visible para todos los clientes en la Sección Dorada.',
       type: 'worker',
     });
   };
 
-  // First time 3D finish
-  const handleFinish3D = () => {
+  // Finalizar intro de primera visita
+  const handleFinishIntro = () => {
     localStorage.setItem(VISITED_KEY, 'true');
-    setShow3DIntro(false);
+    setFullScreenLoader(null);
   };
 
   // Filtered Technicians
@@ -441,6 +560,19 @@ export default function App() {
     // Filter by Online status
     if (onlyAvailableNow) {
       list = list.filter((t) => t.isAvailableNow);
+    }
+
+    // Filter by Price range: $20.000 to $10.000.000 COP
+    list = list.filter((t) => {
+      const price = t.visitFeeCOP || (t.services && t.services[0] ? t.services[0].priceCOP : 40000);
+      return price >= minPriceCOP && price <= maxPriceCOP;
+    });
+
+    // Filter by Neighborhood
+    if (selectedNeighborhood !== 'all') {
+      list = list.filter((t) =>
+        t.neighborhoods.some((n) => n.toLowerCase() === selectedNeighborhood.toLowerCase())
+      );
     }
 
     // Filter by Search Query
@@ -470,7 +602,17 @@ export default function App() {
     }
 
     return list;
-  }, [currentCity, selectedCategory, onlyAvailableNow, searchQuery, sortBy, techniciansList]);
+  }, [
+    currentCity,
+    selectedCategory,
+    onlyAvailableNow,
+    minPriceCOP,
+    maxPriceCOP,
+    selectedNeighborhood,
+    searchQuery,
+    sortBy,
+    techniciansList,
+  ]);
 
   // Handler: Open Emergency flow
   const handleOpenEmergency = () => {
@@ -646,7 +788,18 @@ export default function App() {
   if (showLanding) {
     return (
       <>
-        {show3DIntro && <FirstTimeCamelLoader onFinish={handleFinish3D} />}
+        {fullScreenLoader && (
+          <CamelCanvasLoader
+            title={fullScreenLoader.title}
+            subtitle={fullScreenLoader.subtitle}
+            onFinish={() => {
+              localStorage.setItem(VISITED_KEY, 'true');
+              const cb = fullScreenLoader.onComplete;
+              setFullScreenLoader(null);
+              if (cb) cb();
+            }}
+          />
+        )}
         <Home onHire={() => handleEnterAs('client')} onWork={() => handleEnterAs('worker')} />
         <AuthModal
           isOpen={isAuthModalOpen}
@@ -666,8 +819,19 @@ export default function App() {
           : 'bg-slate-50 dark:bg-[#121214] text-[#1d1d1f] dark:text-[#f5f5f7]'
       }`}
     >
-      {/* 1. Loading 3D del camello caminando para primerizos */}
-      {show3DIntro && <FirstTimeCamelLoader onFinish={handleFinish3D} />}
+      {/* 1. Loading de pantalla completa con diseño Canvas del camello (adaptado a velocidad de internet) */}
+      {fullScreenLoader && (
+        <CamelCanvasLoader
+          title={fullScreenLoader.title}
+          subtitle={fullScreenLoader.subtitle}
+          onFinish={() => {
+            localStorage.setItem(VISITED_KEY, 'true');
+            const cb = fullScreenLoader.onComplete;
+            setFullScreenLoader(null);
+            if (cb) cb();
+          }}
+        />
+      )}
 
       {/* 2. Apple Frosted Sticky Header con Accesibilidad & Auth */}
       <Header
@@ -678,207 +842,313 @@ export default function App() {
         onSelectTab={setActiveTab}
         activeJobsCount={activeJobs.filter((j) => j.status !== 'completado').length}
         onOpenEmergency={handleOpenEmergency}
-        isWorkerMode={activeTab === 'worker_mode'}
+        onOpenNeedWorker={() => setIsNeedWorkerModalOpen(true)}
+        isWorkerMode={isWorkerMode}
         onToggleWorkerMode={() => {
-          if (!currentUser && activeTab !== 'worker_mode') {
+          if (!currentUser && !isWorkerMode) {
             setAuthDefaultRole('worker');
             setIsAuthModalOpen(true);
             return;
           }
-          setActiveTab(activeTab === 'worker_mode' ? 'browse' : 'worker_mode');
+          if (isWorkerMode) {
+            handleSwitchToClient();
+          } else {
+            handleSwitchToWorker();
+          }
         }}
         currentUser={currentUser}
         onOpenAuth={() => setIsAuthModalOpen(true)}
         onLogout={handleLogout}
-        onShow3DIntro={() => setShow3DIntro(true)}
       />
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10 pb-12 w-full">
        <MotionConfig reducedMotion="user">
-        <motion.div key={activeTab} {...pageEnter}>
-        {/* VIEW 1: BROWSE & EXPLORE CAMELOS (CLIENTE) */}
-        {activeTab === 'browse' && (
-          <div>
-            {/* Urgent 24/7 Emergency Alert Banner */}
-            <UrgentBanner
-              cityName={currentCityObj.name}
-              onOpenEmergency={handleOpenEmergency}
-              onFilterUrgent={() => setOnlyAvailableNow(!onlyAvailableNow)}
-              isUrgentFiltered={onlyAvailableNow}
-            />
+        <motion.div key={`${activeTab}-${isWorkerMode}`} {...pageEnter}>
+        {/* VIEW 1: BROWSE - EN TRABAJADOR ES "EXPLORAR CLIENTES" / EN CLIENTE ES "EXPLORAR TÉCNICOS" */}
+        {activeTab === 'browse' && isWorkerMode && (
+          <ExploreClientsView
+            opportunities={opportunities}
+            onAcceptOpportunity={handleAcceptOpportunity}
+            onPublishAd={handlePublishAd}
+            workerName={currentUser?.name || 'Técnico Aliado'}
+            workerPhone={currentUser?.phone || '312 458 9210'}
+          />
+        )}
 
-            {/* Category Filter Bar */}
-            <CategoryFilter
-              categories={CATEGORIES}
-              selectedCategory={selectedCategory}
-              onSelectCategory={setSelectedCategory}
-            />
-
-            {/* Apple Spotlight Style Search & Utility Bar */}
-            <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl border border-black/[0.06] dark:border-white/[0.08] p-4 sm:p-5 mb-6 shadow-[0_2px_12px_rgba(0,0,0,0.03)] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3.5">
-              {/* Search input with Apple style */}
-              <div className="relative flex-1">
-                <label htmlFor="tech-search" className="sr-only">
-                  Buscar técnicos
-                </label>
-                <Search aria-hidden="true" className="w-4 h-4 text-[#6e6e73] absolute left-4 top-1/2 -translate-y-1/2" />
-                <input
-                  id="tech-search"
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Buscar daño, plomero, cerrajero, calentador, barrio..."
-                  className="w-full pl-11 pr-16 py-2.5 text-xs sm:text-sm bg-[#f5f5f7] dark:bg-white/[0.06] focus:bg-white dark:focus:bg-[#2c2c2e] border border-black/[0.06] dark:border-white/[0.08] focus:border-[#c2410c] focus:ring-4 focus:ring-[#c2410c]/15 rounded-2xl transition-all outline-none"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery('')}
-                    aria-label="Limpiar búsqueda"
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-medium text-[#6e6e73] hover:text-[#1d1d1f] dark:hover:text-white bg-black/[0.04] dark:bg-white/[0.08] px-2 py-0.5 rounded-full cursor-pointer"
-                  >
-                    Limpiar
-                  </button>
-                )}
-              </div>
-
-              {/* Filters & Sorting */}
-              <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-                {/* iOS Toggle Switch for "Disponibles Ya" */}
+        {activeTab === 'browse' && !isWorkerMode && (
+          <div className="space-y-6">
+            {/* Sub-nav de la Web Cliente: (Anuncios) vs (Buscar Camellos) */}
+            <div className="flex items-center justify-center mb-6">
+              <div className="inline-flex p-1.5 rounded-full bg-black/[0.05] dark:bg-white/[0.08] border border-black/[0.06] dark:border-white/[0.1] shadow-inner">
                 <button
                   type="button"
-                  role="switch"
-                  aria-checked={onlyAvailableNow}
-                  onClick={() => setOnlyAvailableNow(!onlyAvailableNow)}
-                  className={`flex items-center gap-2.5 px-3.5 py-2 rounded-2xl border transition-all cursor-pointer select-none ${
-                    onlyAvailableNow
-                      ? 'bg-[#34c759]/10 border-[#34c759]/30 text-[#1d1d1f] dark:text-white'
-                      : 'bg-white dark:bg-[#2c2c2e] border-black/[0.06] dark:border-white/[0.08] text-[#6e6e73] dark:text-[#a1a1a6] hover:border-black/[0.12]'
-                  } apple-press`}
+                  onClick={() => setClientSubTab('anuncios')}
+                  className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                    clientSubTab === 'anuncios'
+                      ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black shadow-md shadow-amber-500/20'
+                      : 'text-[#6e6e73] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-white'
+                  }`}
                 >
-                  {/* Switch */}
-                  <span
-                    aria-hidden="true"
-                    className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
-                      onlyAvailableNow ? 'bg-[#34c759]' : 'bg-black/[0.15] dark:bg-white/20'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform shadow-xs ${
-                        onlyAvailableNow ? 'translate-x-4.5' : 'translate-x-0.5'
-                      }`}
-                    />
-                  </span>
-                  <span className="text-xs font-semibold whitespace-nowrap">
-                    Disponibles Ya
-                  </span>
+                  <Sparkles className="w-4 h-4" />
+                  <span>(Anuncios) · Sección Dorada</span>
                 </button>
 
-                {/* Apple Sort Selector */}
-                <div className="flex items-center gap-1.5 bg-[#f5f5f7] dark:bg-white/[0.06] px-3 py-1.5 rounded-2xl border border-black/[0.06] dark:border-white/[0.08] text-xs text-[#6e6e73] dark:text-[#a1a1a6] shrink-0">
-                  <ListFilter className="w-3.5 h-3.5 text-[#6e6e73]" />
-                  <label htmlFor="sort-select" className="sr-only">
-                    Ordenar
-                  </label>
-                  <select
-                    id="sort-select"
-                    value={sortBy}
-                    onChange={(e) =>
-                      setSortBy(e.target.value as 'recommended' | 'price_low' | 'speed')
-                    }
-                    className="bg-transparent text-[#1d1d1f] dark:text-white font-semibold focus:outline-none cursor-pointer text-xs py-0.5"
-                  >
-                    <option value="recommended">Mejor calificados</option>
-                    <option value="speed">Llegada más rápida</option>
-                    <option value="price_low">Menor visita técnica</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick search tags Apple Chips */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-3 text-xs text-[#6e6e73] scrollbar-none mb-5 -mx-4 px-4 sm:mx-0 sm:px-0">
-              <span className="font-semibold text-[#1d1d1f] dark:text-white shrink-0">
-                Frecuentes:
-              </span>
-              {[
-                'Destape tubería',
-                'Chapa trancada',
-                'Calentador a gas',
-                'Fuga de agua',
-                'Cortocircuito',
-                'Lavadora Samsung',
-                'Pintura alcoba',
-              ].map((tag) => (
                 <button
-                  key={tag}
                   type="button"
-                  onClick={() => setSearchQuery(tag)}
-                  className="px-3.5 py-1.5 bg-white dark:bg-[#1c1c1e] hover:bg-[#fafafc] dark:hover:bg-[#2c2c2e] border border-black/[0.06] dark:border-white/[0.08] rounded-full text-[#1d1d1f] dark:text-white whitespace-nowrap transition-all cursor-pointer shadow-xs apple-press"
+                  onClick={() => setClientSubTab('buscar_camellos')}
+                  className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                    clientSubTab === 'buscar_camellos'
+                      ? 'bg-white dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-white shadow-md'
+                      : 'text-[#6e6e73] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-white'
+                  }`}
                 >
-                  {tag}
+                  <Search className="w-4 h-4" />
+                  <span>(Buscar Camellos)</span>
                 </button>
-              ))}
-            </div>
-
-            {/* Technician Grid Header */}
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3 className="text-lg sm:text-xl font-bold text-[#1d1d1f] dark:text-white font-display">
-                  Técnicos & Maestros en {currentCityObj.name}
-                </h3>
-                <p className="text-xs text-[#6e6e73] mt-0.5">
-                  Conectado a MySQL XAMPP · {filteredTechnicians.length} profesionales verificados
-                </p>
               </div>
-
-              {onlyAvailableNow && (
-                <span className="text-xs text-[#248a3d] dark:text-[#34c759] font-semibold bg-[#34c759]/10 px-3 py-1 rounded-full border border-[#34c759]/20 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#34c759] animate-pulse" />
-                  <span>En vivo</span>
-                </span>
-              )}
             </div>
 
-            {/* Technicians Grid */}
-            {filteredTechnicians.length > 0 ? (
-              <motion.div
-                key={`${currentCity}-${selectedCategory}-${sortBy}-${onlyAvailableNow}`}
-                variants={gridContainer}
-                initial="hidden"
-                whileInView="show"
-                viewport={VIEWPORT_ONCE}
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8"
-              >
-                {filteredTechnicians.map((tech) => (
-                  <TechnicianCard
-                    key={tech.id}
-                    technician={tech}
-                    onViewProfile={setSelectedTechModal}
-                    onBookTechnician={(t) => handleOpenBooking(t)}
-                  />
-                ))}
-              </motion.div>
+            {/* Renderizado condicional según SubTab: Anuncios Dorados o Búsqueda con Filtros */}
+            {clientSubTab === 'anuncios' ? (
+              <GoldenAdsSection
+                ads={workerAds}
+                onSelectWorkerForBooking={(name) => {
+                  const tech =
+                    techniciansList.find((t) => t.name.toLowerCase().includes(name.toLowerCase())) ||
+                    techniciansList[0];
+                  handleOpenBooking(tech);
+                }}
+                onGoToWorkerMode={handleSwitchToWorker}
+              />
             ) : (
-              <div className="p-12 text-center bg-white dark:bg-[#1c1c1e] rounded-3xl border border-black/[0.06] dark:border-white/[0.08] shadow-xs space-y-3">
-                <Wrench className="w-10 h-10 text-[#6e6e73] mx-auto" />
-                <h4 className="text-base font-bold text-[#1d1d1f] dark:text-white font-display">
-                  No encontramos técnicos con esos filtros en {currentCityObj.name}
-                </h4>
-                <p className="text-xs text-[#6e6e73] dark:text-[#a1a1a6] max-w-md mx-auto">
-                  Prueba cambiando la categoría, desactivando el filtro de "Disponibles Ya" o limpiando el texto de búsqueda.
-                </p>
-                <button
-                  onClick={() => {
-                    setSelectedCategory('all');
-                    setSearchQuery('');
-                    setOnlyAvailableNow(false);
-                  }}
-                  className="apple-pill-primary px-5 py-2 text-xs font-semibold rounded-full cursor-pointer"
-                >
-                  Restablecer todos los filtros
-                </button>
+              <div>
+                {/* Urgent 24/7 Emergency Alert Banner */}
+                <UrgentBanner
+                  cityName={currentCityObj.name}
+                  onOpenEmergency={() => setIsNeedWorkerModalOpen(true)}
+                  onFilterUrgent={() => setOnlyAvailableNow(!onlyAvailableNow)}
+                  isUrgentFiltered={onlyAvailableNow}
+                />
+
+                {/* Category Filter Bar */}
+                <CategoryFilter
+                  categories={CATEGORIES}
+                  selectedCategory={selectedCategory}
+                  onSelectCategory={setSelectedCategory}
+                />
+
+                {/* Panel de Filtros: Cobros de 20mil a 10millones COP, Locación y Búsqueda */}
+                <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl border border-black/[0.06] dark:border-white/[0.08] p-4 sm:p-5 mb-6 shadow-[0_2px_12px_rgba(0,0,0,0.03)] space-y-4">
+                  {/* Search input with Apple style */}
+                  <div className="relative">
+                    <label htmlFor="tech-search" className="sr-only">
+                      Buscar técnicos
+                    </label>
+                    <Search aria-hidden="true" className="w-4 h-4 text-[#6e6e73] absolute left-4 top-1/2 -translate-y-1/2" />
+                    <input
+                      id="tech-search"
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Buscar daño, plomero, cerrajero, calentador, barrio..."
+                      className="w-full pl-11 pr-16 py-2.5 text-xs sm:text-sm bg-[#f5f5f7] dark:bg-white/[0.06] focus:bg-white dark:focus:bg-[#2c2c2e] border border-black/[0.06] dark:border-white/[0.08] focus:border-[#c2410c] focus:ring-4 focus:ring-[#c2410c]/15 rounded-2xl transition-all outline-none"
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery('')}
+                        aria-label="Limpiar búsqueda"
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-medium text-[#6e6e73] hover:text-[#1d1d1f] dark:hover:text-white bg-black/[0.04] dark:bg-white/[0.08] px-2 py-0.5 rounded-full cursor-pointer"
+                      >
+                        Limpiar
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Controles de Rango de Cobros ($20.000 a $10.000.000 COP) y Locación */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-black/[0.04] dark:border-white/[0.06]">
+                    {/* Cobro Mínimo */}
+                    <div>
+                      <label className="block text-[11px] font-bold text-[#6e6e73] dark:text-[#a1a1a6] mb-1">
+                        Cobro Mínimo: <span className="text-[#c2410c] font-mono">${minPriceCOP.toLocaleString('es-CO')} COP</span>
+                      </label>
+                      <input
+                        type="range"
+                        min={20000}
+                        max={10000000}
+                        step={20000}
+                        value={minPriceCOP}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          if (val <= maxPriceCOP) setMinPriceCOP(val);
+                        }}
+                        className="w-full accent-[#c2410c] cursor-pointer"
+                      />
+                    </div>
+
+                    {/* Cobro Máximo */}
+                    <div>
+                      <label className="block text-[11px] font-bold text-[#6e6e73] dark:text-[#a1a1a6] mb-1">
+                        Cobro Máximo: <span className="text-[#c2410c] font-mono">${maxPriceCOP.toLocaleString('es-CO')} COP</span>
+                      </label>
+                      <input
+                        type="range"
+                        min={20000}
+                        max={10000000}
+                        step={50000}
+                        value={maxPriceCOP}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          if (val >= minPriceCOP) setMaxPriceCOP(val);
+                        }}
+                        className="w-full accent-[#c2410c] cursor-pointer"
+                      />
+                    </div>
+
+                    {/* Filtro de Locación / Barrio */}
+                    <div>
+                      <label className="block text-[11px] font-bold text-[#6e6e73] dark:text-[#a1a1a6] mb-1">
+                        Locación / Barrio
+                      </label>
+                      <div className="relative">
+                        <MapPin className="w-3.5 h-3.5 text-[#c2410c] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <select
+                          value={selectedNeighborhood}
+                          onChange={(e) => setSelectedNeighborhood(e.target.value)}
+                          className="w-full pl-8 pr-3 py-1.5 bg-[#f5f5f7] dark:bg-white/[0.06] border border-black/[0.06] dark:border-white/[0.08] rounded-xl text-xs font-medium outline-none cursor-pointer"
+                        >
+                          <option value="all">Todos los barrios ({currentCityObj.name})</option>
+                          {currentCityObj.zones.map((zone) => (
+                            <option key={zone} value={zone} className="bg-[#1c1c1e] text-white">
+                              {zone}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Disponibles Ya & Ordenar */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={onlyAvailableNow}
+                        onClick={() => setOnlyAvailableNow(!onlyAvailableNow)}
+                        className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-xl border text-xs font-semibold cursor-pointer ${
+                          onlyAvailableNow
+                            ? 'bg-[#34c759]/10 border-[#34c759]/40 text-[#248a3d] dark:text-[#34c759]'
+                            : 'bg-[#f5f5f7] dark:bg-white/[0.06] border-black/[0.06] dark:border-white/[0.08] text-[#6e6e73]'
+                        }`}
+                      >
+                        <span className={`w-2 h-2 rounded-full ${onlyAvailableNow ? 'bg-[#34c759] animate-pulse' : 'bg-gray-400'}`} />
+                        <span className="whitespace-nowrap">Disponibles Ya</span>
+                      </button>
+
+                      <div className="flex-1 bg-[#f5f5f7] dark:bg-white/[0.06] px-2 py-1 rounded-xl border border-black/[0.06] dark:border-white/[0.08]">
+                        <select
+                          id="sort-select"
+                          value={sortBy}
+                          onChange={(e) => setSortBy(e.target.value as any)}
+                          className="bg-transparent text-[#1d1d1f] dark:text-white font-semibold text-xs outline-none cursor-pointer w-full"
+                        >
+                          <option value="recommended" className="bg-[#1c1c1e] text-white">Mejor calificados</option>
+                          <option value="speed" className="bg-[#1c1c1e] text-white">Más rápidos</option>
+                          <option value="price_low" className="bg-[#1c1c1e] text-white">Menor tarifa</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick search tags Apple Chips */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-3 text-xs text-[#6e6e73] scrollbar-none mb-5 -mx-4 px-4 sm:mx-0 sm:px-0">
+                  <span className="font-semibold text-[#1d1d1f] dark:text-white shrink-0">
+                    Frecuentes:
+                  </span>
+                  {[
+                    'Destape tubería',
+                    'Chapa trancada',
+                    'Calentador a gas',
+                    'Fuga de agua',
+                    'Cortocircuito',
+                    'Lavadora Samsung',
+                    'Pintura alcoba',
+                  ].map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setSearchQuery(tag)}
+                      className="px-3.5 py-1.5 bg-white dark:bg-[#1c1c1e] hover:bg-[#fafafc] dark:hover:bg-[#2c2c2e] border border-black/[0.06] dark:border-white/[0.08] rounded-full text-[#1d1d1f] dark:text-white whitespace-nowrap transition-all cursor-pointer shadow-xs apple-press"
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Technician Grid Header */}
+                <div className="flex items-center justify-between mb-5">
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-bold text-[#1d1d1f] dark:text-white font-display">
+                      Técnicos & Maestros en {currentCityObj.name}
+                    </h3>
+                    <p className="text-xs text-[#6e6e73] mt-0.5">
+                      Conectado a MySQL XAMPP · {filteredTechnicians.length} profesionales activos
+                    </p>
+                  </div>
+
+                  {onlyAvailableNow && (
+                    <span className="text-xs text-[#248a3d] dark:text-[#34c759] font-semibold bg-[#34c759]/10 px-3 py-1 rounded-full border border-[#34c759]/20 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-[#34c759] animate-pulse" />
+                      <span>En vivo</span>
+                    </span>
+                  )}
+                </div>
+
+                {/* Technicians Grid */}
+                {filteredTechnicians.length > 0 ? (
+                  <motion.div
+                    key={`${currentCity}-${selectedCategory}-${sortBy}-${onlyAvailableNow}-${minPriceCOP}-${maxPriceCOP}-${selectedNeighborhood}`}
+                    variants={gridContainer}
+                    initial="hidden"
+                    whileInView="show"
+                    viewport={VIEWPORT_ONCE}
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8"
+                  >
+                    {filteredTechnicians.map((tech) => (
+                      <TechnicianCard
+                        key={tech.id}
+                        technician={tech}
+                        onViewProfile={setSelectedTechModal}
+                        onBookTechnician={(t) => handleOpenBooking(t)}
+                      />
+                    ))}
+                  </motion.div>
+                ) : (
+                  <div className="p-12 text-center bg-white dark:bg-[#1c1c1e] rounded-3xl border border-black/[0.06] dark:border-white/[0.08] shadow-xs space-y-3">
+                    <Wrench className="w-10 h-10 text-[#6e6e73] mx-auto" />
+                    <h4 className="text-base font-bold text-[#1d1d1f] dark:text-white font-display">
+                      No encontramos técnicos con esos filtros en {currentCityObj.name}
+                    </h4>
+                    <p className="text-xs text-[#6e6e73] dark:text-[#a1a1a6] max-w-md mx-auto">
+                      Prueba ajustando el rango de cobro, cambiando la categoría o limpiando la búsqueda.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategory('all');
+                        setSearchQuery('');
+                        setOnlyAvailableNow(false);
+                        setMinPriceCOP(20000);
+                        setMaxPriceCOP(10000000);
+                        setSelectedNeighborhood('all');
+                      }}
+                      className="apple-pill-primary px-5 py-2 text-xs font-semibold rounded-full cursor-pointer"
+                    >
+                      Restablecer todos los filtros
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1089,6 +1359,16 @@ export default function App() {
         onUpgradeSuccess={handleWorkerUpgradeSuccess}
       />
 
+      {/* 6. Modal de Solicitud de Camellador para Clientes ("Necesito Camellador") */}
+      <NeedWorkerModal
+        isOpen={isNeedWorkerModalOpen}
+        onClose={() => setIsNeedWorkerModalOpen(false)}
+        cities={CITIES}
+        currentCityName={currentCityObj.name}
+        defaultClientName={currentUser?.name}
+        onSubmit={handleCreateClientRequest}
+      />
+
       {/* Notificación flotante de cambio de rol */}
       {toastNotification && (
         <div className="fixed top-20 right-4 sm:right-6 z-50 max-w-sm w-[90vw] sm:w-auto p-4 rounded-2xl bg-[#161617]/95 dark:bg-[#1c1c1e]/95 text-white shadow-[0_12px_40px_rgba(0,0,0,0.35)] border border-white/[0.12] backdrop-blur-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-4 duration-200">
@@ -1121,7 +1401,7 @@ export default function App() {
 
       {/* Mobile iOS Frosted Bottom Tab Bar */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 apple-glass dark:bg-[#1c1c1e]/90 border-t border-black/[0.06] dark:border-white/[0.08] px-2 py-1.5 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-        <div className="grid grid-cols-4 items-center h-12">
+        <div className={`grid ${isWorkerMode ? 'grid-cols-4' : 'grid-cols-4'} items-center h-12`}>
           <button
             onClick={() => setActiveTab('browse')}
             className={`min-h-[44px] flex flex-col items-center justify-center transition-colors cursor-pointer ${
@@ -1129,21 +1409,31 @@ export default function App() {
             }`}
           >
             <Search className="w-5 h-5" />
-            <span className="text-[10px] mt-0.5">Explorar</span>
+            <span className="text-[10px] mt-0.5">{isWorkerMode ? 'Clientes' : 'Explorar'}</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab('active_jobs')}
-            className={`min-h-[44px] flex flex-col items-center justify-center relative transition-colors cursor-pointer ${
-              activeTab === 'active_jobs' ? 'text-[#c2410c] font-bold' : 'text-[#6e6e73]'
-            }`}
-          >
-            <Wrench className="w-5 h-5" />
-            <span className="text-[10px] mt-0.5">Mi Camello</span>
-            {activeJobs.filter((j) => j.status !== 'completado').length > 0 && (
-              <span className="absolute top-1.5 right-5 w-2 h-2 rounded-full bg-[#f05023]" />
-            )}
-          </button>
+          {isWorkerMode ? (
+            <button
+              onClick={() => setActiveTab('active_jobs')}
+              className={`min-h-[44px] flex flex-col items-center justify-center relative transition-colors cursor-pointer ${
+                activeTab === 'active_jobs' ? 'text-[#c2410c] font-bold' : 'text-[#6e6e73]'
+              }`}
+            >
+              <Wrench className="w-5 h-5" />
+              <span className="text-[10px] mt-0.5">Mi Camello</span>
+              {activeJobs.filter((j) => j.status !== 'completado').length > 0 && (
+                <span className="absolute top-1.5 right-5 w-2 h-2 rounded-full bg-[#f05023]" />
+              )}
+            </button>
+          ) : (
+            <button
+              onClick={() => setIsNeedWorkerModalOpen(true)}
+              className="min-h-[44px] flex flex-col items-center justify-center transition-colors cursor-pointer text-[#ea580c] font-bold"
+            >
+              <span className="text-base leading-none">📢</span>
+              <span className="text-[10px] mt-0.5">Pedir Camello</span>
+            </button>
+          )}
 
           <button
             onClick={() => setActiveTab('guarantee')}
@@ -1157,19 +1447,18 @@ export default function App() {
 
           <button
             onClick={() => {
-              if (!currentUser && activeTab !== 'worker_mode') {
-                setAuthDefaultRole('worker');
-                setIsAuthModalOpen(true);
-                return;
+              if (isWorkerMode) {
+                setActiveTab('worker_mode');
+              } else {
+                handleSwitchToWorker();
               }
-              setActiveTab('worker_mode');
             }}
             className={`min-h-[44px] flex flex-col items-center justify-center transition-colors cursor-pointer ${
               activeTab === 'worker_mode' ? 'text-[#ff9500] font-bold' : 'text-[#6e6e73]'
             }`}
           >
             <HardHat className="w-5 h-5" />
-            <span className="text-[10px] mt-0.5">Soy Técnico</span>
+            <span className="text-[10px] mt-0.5">{isWorkerMode ? 'Panel' : 'Soy Técnico'}</span>
           </button>
         </div>
       </div>
