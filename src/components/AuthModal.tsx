@@ -102,7 +102,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [timerSeconds, setTimerSeconds] = useState(300); // 5 minutos = 300 segundos
   const [timerActive, setTimerActive] = useState(false);
-  const [debugRecoveryCode, setDebugRecoveryCode] = useState('');
 
   // --- Captcha Matemático ---
   const [captchaNum1, setCaptchaNum1] = useState(4);
@@ -312,7 +311,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         setRecoveryStep(2);
         setTimerSeconds(res.expires_in_seconds || 300);
         setTimerActive(true);
-        if (res.debug_code) setDebugRecoveryCode(res.debug_code);
         setSuccessMsg(res.message);
       } else {
         setErrorMsg(res.message);
@@ -844,13 +842,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     </span>
                   </div>
                   <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-relaxed">
-                    Hemos enviado el código a <strong>{recoveryEmail}</strong>. Tienes 5 minutos antes de que el código se destruya en la base de datos MySQL de XAMPP.
+                    Hemos enviado el código a <strong>{recoveryEmail}</strong>. Tienes 5 minutos antes de que el código expire. Revisa tu bandeja de entrada o carpeta de spam.
                   </p>
-                  {debugRecoveryCode && (
-                    <div className="p-2 bg-white dark:bg-[#1c1c1e] rounded-xl text-xs font-mono text-center font-bold text-[#c2410c] border border-dashed border-orange-300">
-                      Código de prueba (local): {debugRecoveryCode}
-                    </div>
-                  )}
                 </div>
 
                 <div>

@@ -183,3 +183,8 @@ export function getAuthCookie(name: string): string | null {
   const match = document.cookie.match(new RegExp('(?:^|;\\s*)' + name + '=([^;]*)'));
   return match ? decodeURIComponent(match[1]) : null;
 }
+
+export function deleteAuthCookie(name: string) {
+  if (typeof document === 'undefined') return;
+  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`;
+}

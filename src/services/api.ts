@@ -10,6 +10,7 @@ export interface UserSession {
   email: string;
   role: 'client' | 'worker' | 'admin';
   city: string;
+  avatar_url?: string;
 }
 
 export interface ClientRegistrationPayload {

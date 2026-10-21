@@ -19,6 +19,7 @@ import {
   ArrowRight,
   ListFilter,
   Check,
+  X,
 } from 'lucide-react';
 import {
   CITIES,
@@ -27,6 +28,7 @@ import {
   INITIAL_ACTIVE_JOB,
   AVAILABLE_OPPORTUNITIES as FALLBACK_OPPORTUNITIES,
 } from './data/mockData';
+import { setAuthCookie, getAuthCookie, deleteAuthCookie } from './data/colombiaData';
 import {
   CityId,
   CategoryId,
@@ -48,6 +50,8 @@ import { GuaranteeModal } from './components/GuaranteeModal';
 import { Footer } from './components/Footer';
 import { FirstTimeCamelLoader } from './components/FirstTimeCamelLoader';
 import { ElCamelloBot } from './components/ElCamelloBot';
+import { RoleSwitchFloatingButton } from './components/RoleSwitchFloatingButton';
+import { WorkerUpgradeModal } from './components/WorkerUpgradeModal';
 import { AuthModal } from './components/AuthModal';
 import { Home } from './components/Home';
 import { apiService, UserSession } from './services/api';
@@ -81,15 +85,20 @@ export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authDefaultRole, setAuthDefaultRole] = useState<'client' | 'worker'>('client');
 
-  // Landing de marca: se muestra primero salvo que ya exista sesión o ruta segura
+  // Landing de marca: se muestra primero salvo que ya exista sesión, cookie o ruta segura
   const [showLanding, setShowLanding] = useState<boolean>(() => {
-    const hasRoute = /^#\/(client|worker)\/[a-zA-Z0-9]+$/.test(window.location.hash);
-    return !hasRoute && !localStorage.getItem(USER_KEY);
+    const hasRoute = /^#\/(client|worker)\/[a-zA-Z0-9_-]+$/.test(window.location.hash);
+    const hasCookie = getAuthCookie('ec_logged_in') === 'true' || !!getAuthCookie('ec_user_session');
+    return !hasRoute && !hasCookie && !localStorage.getItem(USER_KEY);
   });
 
-  // Navigation & Location
+  // Navigation & Location: Recuerda si estaba en trabajador o cliente por cookies
   const [currentCity, setCurrentCity] = useState<CityId>('neiva');
-  const [activeTab, setActiveTab] = useState<'browse' | 'active_jobs' | 'worker_mode' | 'guarantee'>('browse');
+  const [activeTab, setActiveTab] = useState<'browse' | 'active_jobs' | 'worker_mode' | 'guarantee'>(() => {
+    const savedMode = getAuthCookie('ec_active_mode') || localStorage.getItem('ec_active_mode');
+    if (savedMode === 'worker') return 'worker_mode';
+    return 'browse';
+  });
 
   // Search & Filters
   const [selectedCategory, setSelectedCategory] = useState<CategoryId | 'all'>('all');
@@ -109,6 +118,19 @@ export default function App() {
   const [bookingTechnician, setBookingTechnician] = useState<Technician | null>(null);
   const [bookingPresetService, setBookingPresetService] = useState<ServiceTariff | null>(null);
   const [isGuaranteeModalOpen, setIsGuaranteeModalOpen] = useState(false);
+  const [isWorkerUpgradeModalOpen, setIsWorkerUpgradeModalOpen] = useState(false);
+  const [toastNotification, setToastNotification] = useState<{
+    title: string;
+    message: string;
+    type: 'client' | 'worker';
+  } | null>(null);
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (!toastNotification) return;
+    const timer = setTimeout(() => setToastNotification(null), 5500);
+    return () => clearTimeout(timer);
+  }, [toastNotification]);
 
   // City Object
   const currentCityObj = useMemo(() => {
@@ -148,31 +170,86 @@ export default function App() {
     };
   }, []);
 
-  // 3. Ciberseguridad: Verificación de rutas aleatorias (#/client/<token> o #/worker/<token>)
+  // 3. Ciberseguridad: Verificación de rutas (#/client/<token> o #/worker/<token>) con persistencia de cookies
   useEffect(() => {
     const handleHashRoute = async () => {
-      const hash = window.location.hash; // Ej: #/client/d8a39b... o #/worker/8f7a2...
-      const match = hash.match(/^#\/(client|worker)\/([a-zA-Z0-9]+)$/);
+      const hash = window.location.hash; // Ej: #/client/mock... o #/worker/mock...
+      const match = hash.match(/^#\/(client|worker)\/([a-zA-Z0-9_-]+)$/);
 
       if (match) {
         const routeRole = match[1] as 'client' | 'worker';
         const routeToken = match[2];
+        const currentStoredToken = localStorage.getItem(TOKEN_KEY) || getAuthCookie('ec_user_session');
+        const cookieLoggedIn = getAuthCookie('ec_logged_in') === 'true';
 
-        // Validar token contra MySQL en XAMPP
+        // 1. Si el usuario ya está autenticado (en memoria o con cookies/localStorage) con este token:
+        // NO solicitar logueo; sincronizar el modo activo en cookies y vista de inmediato
+        if (
+          (currentUser && (sessionToken === routeToken || currentStoredToken === routeToken)) ||
+          (cookieLoggedIn && currentStoredToken === routeToken)
+        ) {
+          setSessionToken(routeToken);
+          setShowLanding(false);
+          setAuthCookie('ec_user_session', routeToken);
+          setAuthCookie('ec_active_mode', routeRole);
+          setAuthCookie('ec_logged_in', 'true');
+          localStorage.setItem('ec_active_mode', routeRole);
+          if (routeRole === 'worker') {
+            setActiveTab('worker_mode');
+          } else {
+            setActiveTab('browse');
+          }
+          return;
+        }
+
+        // 2. Si es una recarga limpia, validar token contra MySQL en XAMPP
         const valRes = await apiService.validateSession(routeToken, routeRole);
-        if (valRes.success && valRes.valid) {
+        if (valRes && valRes.success && valRes.valid) {
           setSessionToken(routeToken);
           setShowLanding(false);
           setCurrentUser(valRes.user);
           localStorage.setItem(TOKEN_KEY, routeToken);
           localStorage.setItem(USER_KEY, JSON.stringify(valRes.user));
+          setAuthCookie('ec_user_session', routeToken);
+          setAuthCookie('ec_active_mode', routeRole);
+          setAuthCookie('ec_user_role', valRes.user.role || routeRole);
+          setAuthCookie('ec_logged_in', 'true');
+          setAuthCookie(`ec_registered_${valRes.user.role || routeRole}`, 'true');
+          localStorage.setItem('ec_active_mode', routeRole);
           if (routeRole === 'worker') {
             setActiveTab('worker_mode');
+          } else {
+            setActiveTab('browse');
           }
         } else {
-          // Token inválido o manipulado: Bloquear y forzar logeo
+          // 3. Fallback: verificar si hay cookies activas o usuario almacenado localmente para no bloquearlo
+          const storedUser = localStorage.getItem(USER_KEY);
+          if (storedUser && currentStoredToken) {
+            try {
+              const u = JSON.parse(storedUser);
+              setCurrentUser(u);
+              setSessionToken(currentStoredToken);
+              setShowLanding(false);
+              setAuthCookie('ec_user_session', currentStoredToken);
+              setAuthCookie('ec_active_mode', routeRole);
+              setAuthCookie('ec_logged_in', 'true');
+              if (routeRole === 'worker') {
+                setActiveTab('worker_mode');
+              } else {
+                setActiveTab('browse');
+              }
+              return;
+            } catch {
+              // ignore
+            }
+          }
+
+          // Solo si NO existe ninguna sesión auténtica ni cookies:
           localStorage.removeItem(TOKEN_KEY);
           localStorage.removeItem(USER_KEY);
+          deleteAuthCookie('ec_user_session');
+          deleteAuthCookie('ec_active_mode');
+          deleteAuthCookie('ec_logged_in');
           setCurrentUser(null);
           setSessionToken('');
           window.location.hash = '';
@@ -185,7 +262,7 @@ export default function App() {
     handleHashRoute();
     window.addEventListener('hashchange', handleHashRoute);
     return () => window.removeEventListener('hashchange', handleHashRoute);
-  }, []);
+  }, [currentUser, sessionToken]);
 
   // Sync URL hash with secure session token
   useEffect(() => {
@@ -198,13 +275,22 @@ export default function App() {
     }
   }, [sessionToken, currentUser, activeTab]);
 
-  // Auth Success Handler
+  // Auth Success Handler: Guarda cookies persistentes de sesión y rol
   const handleLoginSuccess = (user: UserSession, token: string, role: 'client' | 'worker') => {
     setCurrentUser(user);
     setShowLanding(false);
     setSessionToken(token);
     localStorage.setItem(TOKEN_KEY, token);
     localStorage.setItem(USER_KEY, JSON.stringify(user));
+    localStorage.setItem('ec_active_mode', role);
+
+    // Guardar cookies para no volver a pedir login
+    setAuthCookie('ec_user_session', token);
+    setAuthCookie('ec_active_mode', role);
+    setAuthCookie('ec_user_role', role);
+    setAuthCookie('ec_logged_in', 'true');
+    setAuthCookie(`ec_registered_${role}`, 'true');
+
     window.location.hash = `#/${role}/${token}`;
     if (role === 'worker') {
       setActiveTab('worker_mode');
@@ -213,10 +299,15 @@ export default function App() {
     }
   };
 
-  // Logout Handler
+  // Logout Handler: Limpia localStorage y cookies
   const handleLogout = () => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    localStorage.removeItem('ec_active_mode');
+    deleteAuthCookie('ec_user_session');
+    deleteAuthCookie('ec_active_mode');
+    deleteAuthCookie('ec_logged_in');
+    deleteAuthCookie('ec_user_role');
     setCurrentUser(null);
     setSessionToken('');
     window.location.hash = '';
@@ -233,6 +324,103 @@ export default function App() {
     }
     setAuthDefaultRole(role);
     setIsAuthModalOpen(true);
+  };
+
+  // Comprueba si el usuario ya tiene perfil de trabajador registrado
+  const hasWorkerProfile = useMemo(() => {
+    if (!currentUser) {
+      return (
+        getAuthCookie('ec_registered_worker') === 'true' ||
+        localStorage.getItem('ec_registered_worker') === 'true'
+      );
+    }
+    if (currentUser.role === 'worker') return true;
+    if (getAuthCookie('ec_registered_worker') === 'true') return true;
+    if (localStorage.getItem('ec_registered_worker') === 'true') return true;
+    if (localStorage.getItem(`ec_worker_profile_${currentUser.email.toLowerCase()}`)) return true;
+    return false;
+  }, [currentUser]);
+
+  // Cambiar a Modo Cliente desde trabajador: CONSERVA INTACTO el perfil de trabajador y guarda cookies
+  const handleSwitchToClient = () => {
+    setActiveTab('browse');
+    setShowLanding(false);
+
+    // Guardar cookies para mantener la sesión y el modo activo sin volver a pedir login
+    setAuthCookie('ec_active_mode', 'client');
+    if (sessionToken) {
+      setAuthCookie('ec_user_session', sessionToken);
+      setAuthCookie('ec_logged_in', 'true');
+    }
+    setAuthCookie('ec_registered_client', 'true');
+    localStorage.setItem('ec_active_mode', 'client');
+
+    setToastNotification({
+      title: '🛒 Modo Cliente Activado',
+      message: 'Puedes buscar y contratar servicios. Tu perfil de técnico sigue 100% activo y guardado en cookies.',
+      type: 'client',
+    });
+  };
+
+  // Cambiar a Modo Trabajador desde cliente: guarda cookies
+  const handleSwitchToWorker = () => {
+    if (!currentUser) {
+      setAuthDefaultRole('worker');
+      setIsAuthModalOpen(true);
+      return;
+    }
+
+    if (hasWorkerProfile) {
+      // Ya tiene perfil completado: cambio instantáneo sin volver a pedir requisitos
+      setActiveTab('worker_mode');
+      setShowLanding(false);
+
+      // Guardar cookies para mantener la sesión y el modo trabajador sin volver a pedir login
+      setAuthCookie('ec_active_mode', 'worker');
+      if (sessionToken) {
+        setAuthCookie('ec_user_session', sessionToken);
+        setAuthCookie('ec_logged_in', 'true');
+      }
+      setAuthCookie('ec_registered_worker', 'true');
+      localStorage.setItem('ec_active_mode', 'worker');
+
+      setToastNotification({
+        title: '💼 Panel de Técnico Activado',
+        message: '¡Bienvenido de vuelta! Estás listo para recibir solicitudes y aceptar camellos.',
+        type: 'worker',
+      });
+    } else {
+      // Es cliente y aún no ha completado los requisitos de técnico: abrir modal de actualización
+      setIsWorkerUpgradeModalOpen(true);
+    }
+  };
+
+  // Callback al completar requisitos de trabajador desde la cuenta de cliente
+  const handleWorkerUpgradeSuccess = (upgradedUser: UserSession, token: string) => {
+    setCurrentUser(upgradedUser);
+    localStorage.setItem(USER_KEY, JSON.stringify(upgradedUser));
+    const finalToken = token || sessionToken;
+    if (finalToken) {
+      setSessionToken(finalToken);
+      localStorage.setItem(TOKEN_KEY, finalToken);
+      setAuthCookie('ec_user_session', finalToken);
+    }
+
+    // Guardar cookies persistentes completas
+    setAuthCookie('ec_active_mode', 'worker');
+    setAuthCookie('ec_user_role', 'worker');
+    setAuthCookie('ec_registered_worker', 'true');
+    setAuthCookie('ec_logged_in', 'true');
+    localStorage.setItem('ec_active_mode', 'worker');
+    localStorage.setItem('ec_registered_worker', 'true');
+
+    setActiveTab('worker_mode');
+    setShowLanding(false);
+    setToastNotification({
+      title: '🎉 ¡Perfil de Trabajador Activado!',
+      message: 'Tus requisitos fueron verificados y guardados en cookies. Ahora puedes prestar tus servicios sin perder tu cuenta de cliente.',
+      type: 'worker',
+    });
   };
 
   // First time 3D finish
@@ -837,6 +1025,16 @@ export default function App() {
        </MotionConfig>
       </main>
 
+      {/* 2.5 Botón flotante para alternar entre Cliente y Trabajador (Encima del Bot) */}
+      <RoleSwitchFloatingButton
+        currentTab={activeTab}
+        isLoggedIn={!!currentUser}
+        currentUserRole={currentUser?.role}
+        hasWorkerProfile={hasWorkerProfile}
+        onSwitchToWorker={handleSwitchToWorker}
+        onSwitchToClient={handleSwitchToClient}
+      />
+
       {/* 3. Floating Action Bot "El Camello" */}
       <ElCamelloBot mode={activeTab === 'worker_mode' ? 'worker' : 'client'} />
 
@@ -882,6 +1080,44 @@ export default function App() {
         onLoginSuccess={handleLoginSuccess}
         defaultRole={authDefaultRole}
       />
+
+      {/* 5. Modal de Actualización a Trabajador (Para clientes que completan requisitos) */}
+      <WorkerUpgradeModal
+        isOpen={isWorkerUpgradeModalOpen}
+        onClose={() => setIsWorkerUpgradeModalOpen(false)}
+        currentUser={currentUser}
+        onUpgradeSuccess={handleWorkerUpgradeSuccess}
+      />
+
+      {/* Notificación flotante de cambio de rol */}
+      {toastNotification && (
+        <div className="fixed top-20 right-4 sm:right-6 z-50 max-w-sm w-[90vw] sm:w-auto p-4 rounded-2xl bg-[#161617]/95 dark:bg-[#1c1c1e]/95 text-white shadow-[0_12px_40px_rgba(0,0,0,0.35)] border border-white/[0.12] backdrop-blur-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-4 duration-200">
+          <div
+            className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-white font-bold text-sm ${
+              toastNotification.type === 'worker'
+                ? 'bg-gradient-to-br from-[#f05023] to-[#c2410c]'
+                : 'bg-gradient-to-br from-[#0071e3] to-[#005bb5]'
+            }`}
+          >
+            {toastNotification.type === 'worker' ? '🛠️' : '🛒'}
+          </div>
+          <div className="flex-1 pr-2">
+            <h5 className="text-xs font-bold font-display text-white">
+              {toastNotification.title}
+            </h5>
+            <p className="text-[11px] text-[#a1a1a6] mt-0.5 leading-snug">
+              {toastNotification.message}
+            </p>
+          </div>
+          <button
+            onClick={() => setToastNotification(null)}
+            className="text-[#86868b] hover:text-white transition-colors cursor-pointer"
+            aria-label="Cerrar notificación"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Mobile iOS Frosted Bottom Tab Bar */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 apple-glass dark:bg-[#1c1c1e]/90 border-t border-black/[0.06] dark:border-white/[0.08] px-2 py-1.5 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">

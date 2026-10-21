@@ -29,7 +29,7 @@ function createPHPMailerInstance() {
     $smtp_user = $GLOBALS['smtp_user'] ?? '';
     $smtp_pass = $GLOBALS['smtp_pass'] ?? '';
     $smtp_secure = ($GLOBALS['smtp_secure'] ?? 'tls') === 'ssl' ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS;
-    $from_email = $GLOBALS['smtp_from_email'] ?? 'seguridad@echelecamello.co';
+    $from_email = !empty($GLOBALS['smtp_from_email']) ? $GLOBALS['smtp_from_email'] : ($smtp_user ?: 'seguridad@echelecamello.co');
     $from_name = $GLOBALS['smtp_from_name'] ?? 'Échele Camello Seguridad';
 
     // Si el usuario configuró credenciales SMTP, activar SMTP con autenticación
@@ -41,6 +41,14 @@ function createPHPMailerInstance() {
         $mail->Password = $smtp_pass;
         $mail->SMTPSecure = $smtp_secure;
         $mail->Port = $smtp_port;
+        // Compatibilidad con Windows / XAMPP para evitar rechazos de certificado SSL local
+        $mail->SMTPOptions = [
+            'ssl' => [
+                'verify_peer' => false,
+                'verify_peer_name' => false,
+                'allow_self_signed' => true
+            ]
+        ];
     } else {
         // En local XAMPP sin SMTP externo, usa mail() estándar
         $mail->isMail();
@@ -93,7 +101,19 @@ function sendVerificationEmail($recipient_email, $code, $recipient_name = "Usuar
     </html>
     ";
 
+    $smtp_user = $GLOBALS['smtp_user'] ?? '';
+    $smtp_pass = $GLOBALS['smtp_pass'] ?? '';
+    if (empty($smtp_user) || empty($smtp_pass)) {
+        return [
+            "success" => false,
+            "email_dispatched" => false,
+            "recipient" => $recipient_email,
+            "error" => "No se han configurado las credenciales SMTP en backend/config.php ($smtp_user y $smtp_pass). Configura un correo y contraseña de aplicación para enviar correos reales."
+        ];
+    }
+
     $sent = false;
+    $error_info = '';
 
     // Intentar con PHPMailer oficial
     try {
@@ -105,27 +125,19 @@ function sendVerificationEmail($recipient_email, $code, $recipient_name = "Usuar
             $mail->Body = $html_body;
             $mail->AltBody = "Tu código de verificación es: {$code}";
             $sent = $mail->send();
+        } else {
+            $error_info = "No se pudo inicializar PHPMailer.";
         }
     } catch (Exception $e) {
         $sent = false;
-    }
-
-    // Fallback secundario si PHPMailer falla por configuración local
-    if (!$sent && function_exists('mail') && ini_get('sendmail_path')) {
-        $headers = [
-            "MIME-Version: 1.0",
-            "Content-type: text/html; charset=UTF-8",
-            "From: Échele Camello <seguridad@echelecamello.co>",
-            "X-Mailer: PHPMailer/7.1"
-        ];
-        $sent = @mail($recipient_email, $subject, $html_body, implode("\r\n", $headers));
+        $error_info = (isset($mail) && $mail) ? $mail->ErrorInfo : $e->getMessage();
     }
 
     return [
-        "success" => true,
+        "success" => $sent,
         "email_dispatched" => $sent,
         "recipient" => $recipient_email,
-        "code" => $code
+        "error" => $sent ? null : ($error_info ?: "No se pudo entregar el correo mediante SMTP.")
     ];
 }
 
@@ -175,7 +187,19 @@ function sendPasswordRecoveryEmail($recipient_email, $code, $recipient_name = "U
     </html>
     ";
 
+    $smtp_user = $GLOBALS['smtp_user'] ?? '';
+    $smtp_pass = $GLOBALS['smtp_pass'] ?? '';
+    if (empty($smtp_user) || empty($smtp_pass)) {
+        return [
+            "success" => false,
+            "email_dispatched" => false,
+            "recipient" => $recipient_email,
+            "error" => "No se han configurado las credenciales SMTP en backend/config.php ($smtp_user y $smtp_pass). Configura un correo y contraseña de aplicación para enviar correos reales."
+        ];
+    }
+
     $sent = false;
+    $error_info = '';
 
     // Intentar con PHPMailer oficial
     try {
@@ -187,26 +211,18 @@ function sendPasswordRecoveryEmail($recipient_email, $code, $recipient_name = "U
             $mail->Body = $html_body;
             $mail->AltBody = "Tu código de recuperación de contraseña es: {$code}. Expira en 5 minutos.";
             $sent = $mail->send();
+        } else {
+            $error_info = "No se pudo inicializar PHPMailer.";
         }
     } catch (Exception $e) {
         $sent = false;
-    }
-
-    // Fallback secundario si PHPMailer falla por configuración local
-    if (!$sent && function_exists('mail') && ini_get('sendmail_path')) {
-        $headers = [
-            "MIME-Version: 1.0",
-            "Content-type: text/html; charset=UTF-8",
-            "From: Échele Camello <seguridad@echelecamello.co>",
-            "X-Mailer: PHPMailer/7.1"
-        ];
-        $sent = @mail($recipient_email, $subject, $html_body, implode("\r\n", $headers));
+        $error_info = (isset($mail) && $mail) ? $mail->ErrorInfo : $e->getMessage();
     }
 
     return [
-        "success" => true,
+        "success" => $sent,
         "email_dispatched" => $sent,
         "recipient" => $recipient_email,
-        "code" => $code
+        "error" => $sent ? null : ($error_info ?: "No se pudo entregar el correo mediante SMTP.")
     ];
 }

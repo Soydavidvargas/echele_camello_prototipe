@@ -218,7 +218,6 @@ export async function handleRegisterWorker(payload: WorkerRegistrationPayload): 
 export interface RecoveryResult {
   success: boolean;
   message: string;
-  debug_code?: string;
   expires_in_seconds?: number;
 }
 
@@ -231,40 +230,29 @@ export async function handleRequestPasswordRecovery(email: string): Promise<Reco
     return { success: false, message: 'Ingresa un correo electrónico válido.' };
   }
 
-  // 1. Intentar llamar a la API real de PHP/MySQL en XAMPP
+  // Llamar a la API real de PHP/MySQL en XAMPP
   try {
     const res = await apiService.requestPasswordRecovery(normalized);
     if (res && res.success) {
       return {
         success: true,
         message: res.message,
-        debug_code: res.debug_code,
         expires_in_seconds: res.expires_in_seconds || 300,
       };
     }
-    if (res && !res.success && res.message && !res.message.includes('Error de conexión')) {
+    if (res && !res.success && res.message) {
       return { success: false, message: res.message };
     }
-  } catch {
-    // Fallback local
-  }
-
-  await wait(600);
-
-  // Fallback simulado si XAMPP no está activo
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutos exactos
-  try {
-    sessionStorage.setItem(`ec_recovery_${normalized}`, JSON.stringify({ code, expiresAt }));
-  } catch {
-    // ignore
+  } catch (err: any) {
+    return {
+      success: false,
+      message: 'No se pudo conectar con el servidor de correos. Verifica que el servidor backend esté en ejecución.',
+    };
   }
 
   return {
-    success: true,
-    message: 'Hemos enviado un código de 6 dígitos a tu correo. El código expira en 5 minutos.',
-    debug_code: code,
-    expires_in_seconds: 300,
+    success: false,
+    message: 'No se pudo enviar el correo de recuperación.',
   };
 }
 
@@ -344,12 +332,41 @@ export async function validateSession(token: string, role: Role): Promise<Sessio
     // ignore
   }
 
+  // Comprobar cookies de sesión activa
+  const cookieSession = getAuthCookie('ec_user_session');
+  const cookieLoggedIn = getAuthCookie('ec_logged_in') === 'true';
+
   const localUsers = getLocalUsers();
-  const foundLocal = Object.values(localUsers).find((u) => u.user.role === role);
+  // Permitir sesión si coincide el token o si es un usuario válido alternando entre cliente y trabajador
+  const foundLocal = Object.values(localUsers).find((u) => {
+    return (
+      buildMockToken(u.user) === token ||
+      u.user.role === role ||
+      (role === 'client' && u.user.role === 'worker')
+    );
+  });
   if (foundLocal) {
     return { success: true, valid: true, user: foundLocal.user };
   }
 
-  const user = Object.values(MOCK_ACCOUNTS).find((u) => u.role === role);
-  return user ? { success: true, valid: true, user } : { success: false, valid: false };
+  const user = Object.values(MOCK_ACCOUNTS).find(
+    (u) => buildMockToken(u) === token || u.role === role || (role === 'client' && u.role === 'worker')
+  );
+  if (user) {
+    return { success: true, valid: true, user };
+  }
+
+  // Fallback si hay sesión en cookie o localStorage
+  if (cookieLoggedIn || cookieSession === token) {
+    try {
+      const stored = localStorage.getItem('echele_camello_user');
+      if (stored) {
+        return { success: true, valid: true, user: JSON.parse(stored) };
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return { success: false, valid: false };
 }

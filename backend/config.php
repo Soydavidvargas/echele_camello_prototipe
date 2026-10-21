@@ -20,13 +20,31 @@ $db_name = "echele_camello_db";
 $db_user = "root";
 $db_pass = "";
 
-// Configuración SMTP para PHPMailer (se puede configurar con Gmail, Outlook o Mailtrap)
-$smtp_host = "smtp.gmail.com";
-$smtp_port = 587;
-$smtp_user = ""; // Coloca aquí tu correo si deseas enviar correos reales
-$smtp_pass = ""; // Coloca aquí tu contraseña de aplicación
-$smtp_secure = "tls";
-$smtp_from_email = "seguridad@echelecamello.co";
+// Cargar .env si existe en la raíz del proyecto
+$env_path = dirname(__DIR__) . '/.env';
+if (file_exists($env_path)) {
+    $lines = file($env_path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line === '' || strpos($line, '#') === 0) continue;
+        if (strpos($line, '=') !== false) {
+            list($key, $val) = explode('=', $line, 2);
+            $key = trim($key);
+            $val = trim($val, " \t\n\r\0\x0B\"'");
+            if (!isset($_ENV[$key])) {
+                $_ENV[$key] = $val;
+                putenv("{$key}={$val}");
+            }
+        }
+    }
+}
+
+$smtp_host = $_ENV['SMTP_HOST'] ?? "smtp.gmail.com"; // El host correcto de Google
+$smtp_port = intval($_ENV['SMTP_PORT'] ?? 587);
+$smtp_user = $_ENV['SMTP_USER'] ?? "juandavidparadavargas30@gmail.com";
+$smtp_pass = $_ENV['SMTP_PASS'] ?? "gvvupjpxkcebijtv"; // Tu nueva contraseña sin espacios
+$smtp_secure = $_ENV['SMTP_SECURE'] ?? "tls";
+$smtp_from_email = $_ENV['SMTP_FROM_EMAIL'] ?? ($smtp_user ?: "juandavidparadavargas30@gmail.com");
 $smtp_from_name = "Échele Camello Seguridad";
 
 

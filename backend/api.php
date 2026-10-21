@@ -53,11 +53,18 @@ switch ($action) {
         // Enviar correo mediante PHPMailer / Mailer
         $mail_result = sendVerificationEmail($email, $code);
 
+        if (!$mail_result['email_dispatched']) {
+            http_response_code(500);
+            echo json_encode([
+                "success" => false,
+                "message" => "No se pudo enviar el correo a {$email}: " . ($mail_result['error'] ?? "Verifica las credenciales SMTP en backend/config.php")
+            ]);
+            exit();
+        }
+
         echo json_encode([
             "success" => true,
-            "message" => "Código de 6 dígitos enviado exitosamente a {$email}.",
-            // El debug_code permite que el usuario pruebe de inmediato en local si no tiene SMTP configurado en XAMPP
-            "debug_code" => $code,
+            "message" => "Código de 6 dígitos enviado exitosamente a tu correo ({$email}).",
             "expires_in_minutes" => 10
         ]);
         break;
@@ -181,9 +188,24 @@ switch ($action) {
         }
 
         if ($expected_role && $sess['role'] !== $expected_role) {
-            http_response_code(403);
-            echo json_encode(["success" => false, "message" => "No tienes permisos para esta área."]);
-            exit();
+            // Comprobar si el usuario tiene perfil de trabajador registrado
+            $stmt_w = $pdo->prepare("SELECT id FROM worker_profiles WHERE user_id = ?");
+            $stmt_w->execute([$sess['user_id']]);
+            $has_worker_profile = (bool)$stmt_w->fetch();
+
+            $can_access = false;
+            // Cualquier usuario registrado puede acceder a contratar como cliente
+            if ($expected_role === 'client') {
+                $can_access = true;
+            } elseif ($expected_role === 'worker' && ($sess['role'] === 'worker' || $has_worker_profile)) {
+                $can_access = true;
+            }
+
+            if (!$can_access) {
+                http_response_code(403);
+                echo json_encode(["success" => false, "message" => "No tienes permisos para esta área."]);
+                exit();
+            }
         }
 
         echo json_encode([
@@ -559,30 +581,51 @@ switch ($action) {
             exit();
         }
 
-        $stmt_check = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+        $stmt_check = $pdo->prepare("SELECT id, name, email, role, password_hash FROM users WHERE email = ?");
         $stmt_check->execute([$email]);
-        if ($stmt_check->fetch()) {
-            http_response_code(409);
-            echo json_encode(["success" => false, "message" => "Ya existe una cuenta con este correo. Por favor inicia sesión."]);
-            exit();
+        $existing_user = $stmt_check->fetch();
+
+        if ($existing_user) {
+            // Usuario ya registrado (ej: como cliente): lo actualizamos a 'worker' sin borrar nada
+            $user_id = $existing_user['id'];
+            $full_name = trim("{$first_name} {$last_name}") ?: $existing_user['name'];
+            $update_stmt = $pdo->prepare("UPDATE users SET role = 'worker', name = ? WHERE id = ?");
+            $update_stmt->execute([$full_name, $user_id]);
+        } else {
+            $full_name = trim("{$first_name} {$last_name}");
+            $pwd_hash = password_hash($password, PASSWORD_BCRYPT);
+            $stmt_user = $pdo->prepare("INSERT INTO users (name, email, password_hash, role, city) VALUES (?, ?, ?, 'worker', ?)");
+            $stmt_user->execute([$full_name, $email, $pwd_hash, strtolower($city)]);
+            $user_id = $pdo->lastInsertId();
         }
-
-        $full_name = trim("{$first_name} {$last_name}");
-        $pwd_hash = password_hash($password, PASSWORD_BCRYPT);
-
-        $stmt_user = $pdo->prepare("INSERT INTO users (name, email, password_hash, role, city) VALUES (?, ?, ?, 'worker', ?)");
-        $stmt_user->execute([$full_name, $email, $pwd_hash, strtolower($city)]);
-        $user_id = $pdo->lastInsertId();
 
         $stmt_prof = $pdo->prepare("INSERT INTO worker_profiles 
             (user_id, first_name, last_name, avatar_url, has_vehicle, vehicle_type, vehicle_name, vehicle_plate, vehicle_photo, job_role, is_professional, cert_or_work_photo, tools_verified, verification_status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'verified')");
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'verified')
+            ON DUPLICATE KEY UPDATE 
+                first_name=VALUES(first_name),
+                last_name=VALUES(last_name),
+                avatar_url=VALUES(avatar_url),
+                has_vehicle=VALUES(has_vehicle),
+                vehicle_type=VALUES(vehicle_type),
+                vehicle_name=VALUES(vehicle_name),
+                vehicle_plate=VALUES(vehicle_plate),
+                vehicle_photo=VALUES(vehicle_photo),
+                job_role=VALUES(job_role),
+                is_professional=VALUES(is_professional),
+                cert_or_work_photo=VALUES(cert_or_work_photo),
+                tools_verified=VALUES(tools_verified),
+                verification_status='verified'");
         $stmt_prof->execute([
             $user_id, $first_name, $last_name, $avatar_url, $has_vehicle, $vehicle_type, $vehicle_name, $vehicle_plate, $vehicle_photo, $job_role, $is_professional, $cert_or_work_photo, $tools_verified
         ]);
 
-        // Registrar billetera con bono de bienvenida de $100.000 COP
-        $pdo->prepare("INSERT INTO worker_wallets (user_id, balance_cop) VALUES (?, 100000)")->execute([$user_id]);
+        // Registrar o asegurar billetera con bono de bienvenida de $100.000 COP
+        $stmt_w = $pdo->prepare("SELECT id FROM worker_wallets WHERE user_id = ?");
+        $stmt_w->execute([$user_id]);
+        if (!$stmt_w->fetch()) {
+            $pdo->prepare("INSERT INTO worker_wallets (user_id, balance_cop) VALUES (?, 100000)")->execute([$user_id]);
+        }
 
         $session_token = bin2hex(random_bytes(32));
         $session_expires = date('Y-m-d H:i:s', time() + (24 * 3600));
@@ -640,12 +683,20 @@ switch ($action) {
         $stmt_ins->execute([$email, $code, $expires_at]);
 
         // Enviar correo con plantilla HTML especializada para recuperación (PHPMailer / Mailer)
-        sendPasswordRecoveryEmail($email, $code, $user['name']);
+        $mail_result = sendPasswordRecoveryEmail($email, $code, $user['name']);
+
+        if (!$mail_result['email_dispatched']) {
+            http_response_code(500);
+            echo json_encode([
+                "success" => false,
+                "message" => "No se pudo enviar el correo de recuperación a {$email}: " . ($mail_result['error'] ?? "Verifica las credenciales SMTP en backend/config.php")
+            ]);
+            exit();
+        }
 
         echo json_encode([
             "success" => true,
-            "message" => "Hemos enviado un código de recuperación a tu correo. El código expira en 5 minutos.",
-            "debug_code" => $code,
+            "message" => "Hemos enviado un código de recuperación a tu correo ({$email}). Expira en 5 minutos.",
             "expires_in_seconds" => 300
         ]);
         break;
