@@ -1,3 +1,4 @@
+export type UserRole = 'client' | 'worker';
 export type CityId = 'neiva' | 'bogota' | 'medellin' | 'cali' | 'barranquilla' | 'bucaramanga';
 
 export interface CityInfo {
@@ -109,7 +110,7 @@ export interface ChatMessage {
 }
 
 export interface AvailableOpportunity {
-  id: string;
+  id: string | number;
   category: CategoryId;
   categoryName: string;
   title: string;

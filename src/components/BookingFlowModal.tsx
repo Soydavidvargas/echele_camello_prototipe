@@ -38,7 +38,6 @@ const BookingFlowContent: React.FC<BookingFlowModalProps> = ({
   defaultCityName,
   onJobCreated,
 }) => {
-
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
   // Form states
@@ -146,35 +145,42 @@ const BookingFlowContent: React.FC<BookingFlowModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden my-auto">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xl overflow-y-auto animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl max-w-xl w-full max-h-[92vh] flex flex-col shadow-[0_24px_64px_rgba(0,0,0,0.2)] border border-black/[0.08] dark:border-white/[0.1] overflow-hidden my-auto">
+        {/* Apple Header */}
+        <div className="px-6 py-4 border-b border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between bg-[#f5f5f7]/70 dark:bg-white/[0.04] backdrop-blur-md">
           <div>
-            <h3 className="font-bold text-slate-900 text-lg font-display">
-              Solicitar Camello Garantizado
+            <h3 className="font-bold text-[#1d1d1f] dark:text-white text-lg font-display">
+              Solicitar Camello Protegido
             </h3>
-            <p className="text-xs text-slate-500">
-              Paso {step} de 4 · {step === 1 && '¿Qué necesitas reparar?'}
-              {step === 2 && 'Ubicación en tu ciudad'}
-              {step === 3 && 'Horario & Fecha'}
-              {step === 4 && 'Resumen & Método de pago'}
+            <p className="text-xs text-[#86868b] dark:text-[#a1a1a6]">
+              Paso {step} de 4 ·{' '}
+              {step === 1 && 'Detalles del servicio'}
+              {step === 2 && 'Ubicación del domicilio'}
+              {step === 3 && 'Horario & Inmediatez'}
+              {step === 4 && 'Custodia & Pago seguro'}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full bg-black/[0.05] hover:bg-black/[0.1] dark:bg-white/[0.08] dark:hover:bg-white/[0.15] text-[#1d1d1f] dark:text-white flex items-center justify-center transition-colors cursor-pointer apple-press"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Step Progress Bar */}
-        <div className="grid grid-cols-4 h-1.5 bg-slate-100">
-          <div className={`h-full ${step >= 1 ? 'bg-[#ea580c]' : 'bg-transparent'}`} />
-          <div className={`h-full ${step >= 2 ? 'bg-[#ea580c]' : 'bg-transparent'}`} />
-          <div className={`h-full ${step >= 3 ? 'bg-[#ea580c]' : 'bg-transparent'}`} />
-          <div className={`h-full ${step >= 4 ? 'bg-[#ea580c]' : 'bg-transparent'}`} />
+        {/* Apple Step Indicator Pill */}
+        <div className="px-6 pt-3 pb-1 bg-white dark:bg-[#1c1c1e]">
+          <div className="flex items-center gap-1.5">
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+                  i <= step ? 'bg-[#f05023]' : 'bg-black/[0.06]'
+                }`}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Body by Step */}
@@ -183,20 +189,20 @@ const BookingFlowContent: React.FC<BookingFlowModalProps> = ({
           {step === 1 && (
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Título del problema o servicio
+                <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1.5">
+                  Título del problema o labor
                 </label>
                 <input
                   type="text"
                   value={problemTitle}
                   onChange={(e) => setProblemTitle(e.target.value)}
                   placeholder="Ej: Fuga bajo el lavaplatos, chapa trancada, etc."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm font-medium"
+                  className="w-full px-4 py-3 rounded-2xl bg-[#f5f5f7] border border-black/[0.06] focus:bg-white focus:border-[#f05023] focus:ring-4 focus:ring-[#f05023]/10 text-sm font-medium transition-all outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1.5">
                   Describe los detalles del daño
                 </label>
                 <textarea
@@ -204,43 +210,43 @@ const BookingFlowContent: React.FC<BookingFlowModalProps> = ({
                   value={problemDescription}
                   onChange={(e) => setProblemDescription(e.target.value)}
                   placeholder="Indica qué ocurrió, si el agua está cerrada, o si se necesitan repuestos especiales..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                  className="w-full px-4 py-3 rounded-2xl bg-[#f5f5f7] border border-black/[0.06] focus:bg-white focus:border-[#f05023] focus:ring-4 focus:ring-[#f05023]/10 text-sm transition-all outline-none leading-relaxed"
                 />
               </div>
 
               {/* Photo upload simulator */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Foto o video del daño (Opcional para cotización exacta)
+                <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1.5">
+                  Foto o video del daño (Opcional)
                 </label>
                 <div
                   onClick={() => setHasPhotoAttached(!hasPhotoAttached)}
-                  className={`p-4 rounded-xl border-2 border-dashed flex items-center justify-between cursor-pointer transition-all ${
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
                     hasPhotoAttached
-                      ? 'border-emerald-400 bg-emerald-50/50 text-emerald-900'
-                      : 'border-slate-300 bg-slate-50 text-slate-600 hover:border-slate-400'
-                  }`}
+                      ? 'border-[#34c759] bg-[#34c759]/5'
+                      : 'border-black/[0.08] bg-[#f5f5f7] hover:border-black/[0.15]'
+                  } apple-press`}
                 >
                   <div className="flex items-center gap-3">
                     <div
-                      className={`p-2 rounded-lg ${
-                        hasPhotoAttached ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                        hasPhotoAttached ? 'bg-[#34c759] text-white shadow-xs' : 'bg-black/[0.08] text-[#86868b]'
                       }`}
                     >
                       <Camera className="w-5 h-5" />
                     </div>
                     <div>
-                      <span className="text-xs font-semibold block">
-                        {hasPhotoAttached ? '✓ 1 Foto del daño adjuntada' : 'Adjuntar foto desde galería o cámara'}
+                      <span className="text-xs font-semibold text-[#1d1d1f] block">
+                        {hasPhotoAttached ? '✓ 1 Foto del daño adjunta' : 'Adjuntar foto o video'}
                       </span>
-                      <span className="text-[11px] text-slate-500">
+                      <span className="text-[11px] text-[#86868b]">
                         {hasPhotoAttached
                           ? 'fuga_tubo_lavaplatos_foto1.jpg (2.4 MB)'
-                          : 'Ayuda al maestro a llevar los repuestos exactos'}
+                          : 'Ayuda al maestro a llevar repuestos exactos'}
                       </span>
                     </div>
                   </div>
-                  <span className="text-xs font-semibold text-slate-700 underline">
+                  <span className="text-xs font-semibold text-[#f05023]">
                     {hasPhotoAttached ? 'Cambiar' : 'Subir'}
                   </span>
                 </div>
@@ -248,67 +254,60 @@ const BookingFlowContent: React.FC<BookingFlowModalProps> = ({
             </div>
           )}
 
-          {/* STEP 2: Address and Location */}
+          {/* STEP 2: Address */}
           {step === 2 && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 p-3 bg-slate-100 rounded-xl text-xs text-slate-700">
-                <MapPin className="w-4 h-4 text-orange-600 shrink-0" />
-                <span>
-                  Ciudad configurada: <strong>{defaultCityName}</strong>
-                </span>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Dirección (Nomenclatura)
-                </label>
-                <input
-                  type="text"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Ej: Carrera 15 # 119-32 o Calle 72 # 10-34"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm font-medium"
-                />
-              </div>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Barrio / Sector
+                  <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1.5">
+                    Dirección principal
+                  </label>
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Ej: Carrera 8 # 14-38"
+                    className="w-full px-4 py-3 rounded-2xl bg-[#f5f5f7] border border-black/[0.06] focus:bg-white focus:border-[#f05023] focus:ring-4 focus:ring-[#f05023]/10 text-sm font-medium transition-all outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1.5">
+                    Barrio
                   </label>
                   <input
                     type="text"
                     value={neighborhood}
                     onChange={(e) => setNeighborhood(e.target.value)}
-                    placeholder="Ej: Cedritos, Laureles, etc."
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Apto / Casa / Torre
-                  </label>
-                  <input
-                    type="text"
-                    value={apartment}
-                    onChange={(e) => setApartment(e.target.value)}
-                    placeholder="Ej: Apto 402, Torre 3"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                    placeholder="Ej: Quirinal, Ipanema, etc."
+                    className="w-full px-4 py-3 rounded-2xl bg-[#f5f5f7] border border-black/[0.06] focus:bg-white focus:border-[#f05023] focus:ring-4 focus:ring-[#f05023]/10 text-sm font-medium transition-all outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Notas de llegada o portería
+                <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1.5">
+                  Apto, Casa o Torre
+                </label>
+                <input
+                  type="text"
+                  value={apartment}
+                  onChange={(e) => setApartment(e.target.value)}
+                  placeholder="Ej: Torre 3 Apto 402, Casa 15 Conjunto..."
+                  className="w-full px-4 py-3 rounded-2xl bg-[#f5f5f7] border border-black/[0.06] focus:bg-white focus:border-[#f05023] focus:ring-4 focus:ring-[#f05023]/10 text-sm font-medium transition-all outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1.5">
+                  Instrucciones de portería o parqueo
                 </label>
                 <input
                   type="text"
                   value={parkingNotes}
                   onChange={(e) => setParkingNotes(e.target.value)}
-                  placeholder="Ej: Dejar moto en visitantes, avisar en citófono..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                  placeholder="Ej: Portería 24h, hay espacio para la moto del técnico..."
+                  className="w-full px-4 py-3 rounded-2xl bg-[#f5f5f7] border border-black/[0.06] focus:bg-white focus:border-[#f05023] focus:ring-4 focus:ring-[#f05023]/10 text-sm font-medium transition-all outline-none"
                 />
               </div>
             </div>
@@ -317,76 +316,76 @@ const BookingFlowContent: React.FC<BookingFlowModalProps> = ({
           {/* STEP 3: Timing and Schedule */}
           {step === 3 && (
             <div className="space-y-4">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                ¿Cuándo requieres el servicio?
+              <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1.5">
+                ¿Cuándo requieres la visita técnica?
               </label>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => setScheduleType('immediate')}
-                  className={`p-4 rounded-2xl border text-left cursor-pointer transition-all ${
+                  className={`p-5 rounded-2xl border text-left cursor-pointer transition-all ${
                     scheduleType === 'immediate'
-                      ? 'border-[#ea580c] bg-orange-50/50 ring-2 ring-orange-500/20'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
-                  }`}
+                      ? 'border-[#f05023] bg-[#f05023]/5 shadow-[0_2px_12px_rgba(240,80,35,0.12)]'
+                      : 'border-black/[0.06] bg-[#f5f5f7] hover:border-black/[0.12]'
+                  } apple-press`}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="p-2 bg-orange-100 text-[#ea580c] rounded-xl">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="w-9 h-9 rounded-xl bg-[#f05023]/10 text-[#f05023] flex items-center justify-center">
                       <Clock className="w-5 h-5" />
                     </div>
                     {scheduleType === 'immediate' && (
-                      <span className="w-5 h-5 bg-[#ea580c] text-white rounded-full flex items-center justify-center">
+                      <span className="w-5 h-5 bg-[#f05023] text-white rounded-full flex items-center justify-center shadow-xs">
                         <Check className="w-3.5 h-3.5" />
                       </span>
                     )}
                   </div>
-                  <h4 className="font-bold text-slate-900 text-sm">
+                  <h4 className="font-bold text-[#1d1d1f] text-sm">
                     Inmediato (25 - 35 min)
                   </h4>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Ideal para fugas, cerrajería o urgencias en el momento.
+                  <p className="text-xs text-[#86868b] mt-1 leading-relaxed">
+                    Técnico en moto en camino directo para fugas o urgencias.
                   </p>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setScheduleType('scheduled')}
-                  className={`p-4 rounded-2xl border text-left cursor-pointer transition-all ${
+                  className={`p-5 rounded-2xl border text-left cursor-pointer transition-all ${
                     scheduleType === 'scheduled'
-                      ? 'border-[#ea580c] bg-orange-50/50 ring-2 ring-orange-500/20'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
-                  }`}
+                      ? 'border-[#f05023] bg-[#f05023]/5 shadow-[0_2px_12px_rgba(240,80,35,0.12)]'
+                      : 'border-black/[0.06] bg-[#f5f5f7] hover:border-black/[0.12]'
+                  } apple-press`}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="p-2 bg-slate-100 text-slate-700 rounded-xl">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="w-9 h-9 rounded-xl bg-black/[0.06] text-[#1d1d1f] flex items-center justify-center">
                       <Sparkles className="w-5 h-5" />
                     </div>
                     {scheduleType === 'scheduled' && (
-                      <span className="w-5 h-5 bg-[#ea580c] text-white rounded-full flex items-center justify-center">
+                      <span className="w-5 h-5 bg-[#f05023] text-white rounded-full flex items-center justify-center shadow-xs">
                         <Check className="w-3.5 h-3.5" />
                       </span>
                     )}
                   </div>
-                  <h4 className="font-bold text-slate-900 text-sm">
+                  <h4 className="font-bold text-[#1d1d1f] text-sm">
                     Programar Fecha & Hora
                   </h4>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Para trabajos planeados, pintura o remodelaciones.
+                  <p className="text-xs text-[#86868b] mt-1 leading-relaxed">
+                    Para mantenimientos programados, pinturas o remodelación.
                   </p>
                 </button>
               </div>
 
               {scheduleType === 'scheduled' && (
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                <div className="p-4 bg-[#f5f5f7] rounded-2xl border border-black/[0.04] space-y-3">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-[#1d1d1f] mb-1">
                       Día del servicio
                     </label>
                     <select
                       value={scheduledDay}
                       onChange={(e) => setScheduledDay(e.target.value)}
-                      className="w-full p-2.5 bg-white border border-slate-300 rounded-xl text-sm"
+                      className="w-full p-3 bg-white border border-black/[0.08] rounded-xl text-sm font-medium"
                     >
                       <option value="Hoy">Hoy mismo</option>
                       <option value="Mañana">Mañana</option>
@@ -396,13 +395,13 @@ const BookingFlowContent: React.FC<BookingFlowModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-[#1d1d1f] mb-1">
                       Franja horaria preferida
                     </label>
                     <select
                       value={scheduledSlot}
                       onChange={(e) => setScheduledSlot(e.target.value)}
-                      className="w-full p-2.5 bg-white border border-slate-300 rounded-xl text-sm"
+                      className="w-full p-3 bg-white border border-black/[0.08] rounded-xl text-sm font-medium"
                     >
                       <option value="Mañana (8:00 AM - 12:00 PM)">
                         Mañana (8:00 AM - 12:00 PM)
@@ -423,29 +422,29 @@ const BookingFlowContent: React.FC<BookingFlowModalProps> = ({
           {/* STEP 4: Summary and Payment in Custody */}
           {step === 4 && (
             <div className="space-y-4">
-              {/* Cost Breakdown */}
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2 text-xs">
-                <div className="flex justify-between text-slate-600">
+              {/* Cost Breakdown Apple Receipt */}
+              <div className="bg-[#f5f5f7] p-5 rounded-2xl border border-black/[0.04] space-y-2 text-xs">
+                <div className="flex justify-between text-[#6e6e73]">
                   <span>Diagnóstico y visita técnica en moto:</span>
-                  <span className="font-semibold text-slate-800 tabular-nums">
+                  <span className="font-semibold text-[#1d1d1f] tabular-nums">
                     ${visitFee.toLocaleString('es-CO')} COP
                   </span>
                 </div>
-                <div className="flex justify-between text-slate-600">
+                <div className="flex justify-between text-[#6e6e73]">
                   <span>Mano de obra estimada ({problemTitle}):</span>
-                  <span className="font-semibold text-slate-800 tabular-nums">
+                  <span className="font-semibold text-[#1d1d1f] tabular-nums">
                     ${estimatedLabor.toLocaleString('es-CO')} COP
                   </span>
                 </div>
-                <div className="flex justify-between text-emerald-700">
+                <div className="flex justify-between text-[#34c759] font-medium">
                   <span>Bono bienvenida "Primer Camello":</span>
                   <span className="font-semibold tabular-nums">
                     -${discountCOP.toLocaleString('es-CO')} COP
                   </span>
                 </div>
-                <div className="pt-2 border-t border-slate-200 flex justify-between items-baseline text-sm">
-                  <span className="font-bold text-slate-900">Total en Custodia:</span>
-                  <span className="font-bold text-base text-[#ea580c] font-display tabular-nums">
+                <div className="pt-3 border-t border-black/[0.06] flex justify-between items-baseline text-sm">
+                  <span className="font-bold text-[#1d1d1f]">Total en Custodia Segura:</span>
+                  <span className="font-bold text-lg text-[#f05023] font-display tabular-nums">
                     ${totalEstimated.toLocaleString('es-CO')} COP
                   </span>
                 </div>
@@ -453,72 +452,106 @@ const BookingFlowContent: React.FC<BookingFlowModalProps> = ({
 
               {/* Payment selector */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Selecciona método de pago (Pago Protegido)
+                <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-2">
+                  Selecciona método de pago (En custodia protegida)
                 </label>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2.5">
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('nequi')}
-                    className={`p-3 rounded-xl border text-left flex items-center gap-2.5 cursor-pointer transition-all ${
+                    className={`p-3.5 rounded-2xl border text-left flex items-center justify-between cursor-pointer transition-all ${
                       paymentMethod === 'nequi'
-                        ? 'border-purple-600 bg-purple-50 text-purple-950 font-semibold'
-                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                    }`}
+                        ? 'border-[#f05023] bg-[#f05023]/5 font-semibold text-[#1d1d1f]'
+                        : 'border-black/[0.06] bg-[#f5f5f7] text-[#48484a] hover:bg-black/[0.03]'
+                    } apple-press`}
                   >
-                    <Smartphone className="w-4 h-4 text-purple-600" />
-                    <span>Nequi</span>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-purple-600/10 text-purple-700 flex items-center justify-center">
+                        <Smartphone className="w-4 h-4" />
+                      </div>
+                      <span className="text-xs">Nequi</span>
+                    </div>
+                    {paymentMethod === 'nequi' && (
+                      <span className="w-4 h-4 rounded-full bg-[#f05023] text-white flex items-center justify-center">
+                        <Check className="w-3 h-3" />
+                      </span>
+                    )}
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('daviplata')}
-                    className={`p-3 rounded-xl border text-left flex items-center gap-2.5 cursor-pointer transition-all ${
+                    className={`p-3.5 rounded-2xl border text-left flex items-center justify-between cursor-pointer transition-all ${
                       paymentMethod === 'daviplata'
-                        ? 'border-red-600 bg-red-50 text-red-950 font-semibold'
-                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                    }`}
+                        ? 'border-[#f05023] bg-[#f05023]/5 font-semibold text-[#1d1d1f]'
+                        : 'border-black/[0.06] bg-[#f5f5f7] text-[#48484a] hover:bg-black/[0.03]'
+                    } apple-press`}
                   >
-                    <Smartphone className="w-4 h-4 text-red-600" />
-                    <span>Daviplata</span>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-red-600/10 text-red-700 flex items-center justify-center">
+                        <Smartphone className="w-4 h-4" />
+                      </div>
+                      <span className="text-xs">Daviplata</span>
+                    </div>
+                    {paymentMethod === 'daviplata' && (
+                      <span className="w-4 h-4 rounded-full bg-[#f05023] text-white flex items-center justify-center">
+                        <Check className="w-3 h-3" />
+                      </span>
+                    )}
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('pse')}
-                    className={`p-3 rounded-xl border text-left flex items-center gap-2.5 cursor-pointer transition-all ${
+                    className={`p-3.5 rounded-2xl border text-left flex items-center justify-between cursor-pointer transition-all ${
                       paymentMethod === 'pse'
-                        ? 'border-blue-600 bg-blue-50 text-blue-950 font-semibold'
-                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                    }`}
+                        ? 'border-[#f05023] bg-[#f05023]/5 font-semibold text-[#1d1d1f]'
+                        : 'border-black/[0.06] bg-[#f5f5f7] text-[#48484a] hover:bg-black/[0.03]'
+                    } apple-press`}
                   >
-                    <CreditCard className="w-4 h-4 text-blue-600" />
-                    <span>PSE / Banco</span>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-blue-600/10 text-blue-700 flex items-center justify-center">
+                        <CreditCard className="w-4 h-4" />
+                      </div>
+                      <span className="text-xs">PSE / Tarjeta</span>
+                    </div>
+                    {paymentMethod === 'pse' && (
+                      <span className="w-4 h-4 rounded-full bg-[#f05023] text-white flex items-center justify-center">
+                        <Check className="w-3 h-3" />
+                      </span>
+                    )}
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('efectivo')}
-                    className={`p-3 rounded-xl border text-left flex items-center gap-2.5 cursor-pointer transition-all ${
+                    className={`p-3.5 rounded-2xl border text-left flex items-center justify-between cursor-pointer transition-all ${
                       paymentMethod === 'efectivo'
-                        ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-semibold'
-                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                    }`}
+                        ? 'border-[#f05023] bg-[#f05023]/5 font-semibold text-[#1d1d1f]'
+                        : 'border-black/[0.06] bg-[#f5f5f7] text-[#48484a] hover:bg-black/[0.03]'
+                    } apple-press`}
                   >
-                    <Banknote className="w-4 h-4 text-emerald-600" />
-                    <span>Efectivo al terminar</span>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-600/10 text-emerald-700 flex items-center justify-center">
+                        <Banknote className="w-4 h-4" />
+                      </div>
+                      <span className="text-xs">Efectivo al fin</span>
+                    </div>
+                    {paymentMethod === 'efectivo' && (
+                      <span className="w-4 h-4 rounded-full bg-[#f05023] text-white flex items-center justify-center">
+                        <Check className="w-3 h-3" />
+                      </span>
+                    )}
                   </button>
                 </div>
               </div>
 
               {/* Guarantee micro banner */}
-              <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-200 flex items-start gap-2.5 text-xs text-emerald-900">
-                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                <span>
-                  <strong>Garantía Camello:</strong> Tu dinero se mantiene en custodia
-                  segura. Solo se desembolsa al maestro cuando tú revises y apruebes la
-                  terminación del trabajo.
+              <div className="bg-[#34c759]/10 p-3.5 rounded-2xl border border-[#34c759]/20 flex items-start gap-2.5 text-xs text-[#1d1d1f]">
+                <ShieldCheck className="w-4 h-4 text-[#34c759] shrink-0 mt-0.5" />
+                <span className="text-[#48484a] text-[11px] leading-relaxed">
+                  <strong className="text-[#1d1d1f]">Garantía Camello:</strong> Tu dinero queda en custodia segura. Solo se libera al técnico cuando tú confirmes que el arreglo quedó perfecto.
                 </span>
               </div>
             </div>
@@ -526,13 +559,13 @@ const BookingFlowContent: React.FC<BookingFlowModalProps> = ({
         </div>
 
         {/* Footer Navigation Buttons */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
+        <div className="p-4 sm:p-5 bg-[#f5f5f7]/80 backdrop-blur-md border-t border-black/[0.06] flex items-center justify-between gap-3">
           {step > 1 ? (
             <button
               onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}
-              className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 text-xs sm:text-sm font-semibold flex items-center gap-1.5 hover:bg-slate-100 transition-colors cursor-pointer"
+              className="px-5 py-2.5 rounded-full border border-black/[0.1] bg-white text-[#1d1d1f] text-xs font-semibold flex items-center gap-1.5 hover:bg-black/[0.04] transition-colors cursor-pointer apple-press"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-3.5 h-3.5" />
               <span>Atrás</span>
             </button>
           ) : (
@@ -542,7 +575,7 @@ const BookingFlowContent: React.FC<BookingFlowModalProps> = ({
           {step < 4 ? (
             <button
               onClick={() => setStep((s) => (s + 1) as 2 | 3 | 4)}
-              className="px-6 py-2.5 rounded-xl bg-[#ea580c] hover:bg-[#c2410c] text-white text-xs sm:text-sm font-semibold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-[0.98]"
+              className="apple-pill-primary px-6 py-2.5 rounded-full text-xs sm:text-sm font-semibold flex items-center gap-1.5 cursor-pointer shadow-sm apple-press"
             >
               <span>Continuar</span>
               <ArrowRight className="w-4 h-4" />
@@ -550,7 +583,7 @@ const BookingFlowContent: React.FC<BookingFlowModalProps> = ({
           ) : (
             <button
               onClick={handleFinishBooking}
-              className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-[0.98]"
+              className="px-6 py-2.5 rounded-full bg-[#34c759] hover:bg-[#2db84f] text-white text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-[0_2px_12px_rgba(52,199,89,0.35)] transition-all cursor-pointer apple-press"
             >
               <Check className="w-4 h-4" />
               <span>Confirmar & Despachar Camello</span>

@@ -1,20 +1,52 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
-  html {
-    scroll-behavior: smooth;
+  :root {
+    --apple-bg: #f5f5f7;
+    --apple-surface: #ffffff;
+    --apple-text-primary: #1d1d1f;
+    --apple-text-secondary: #86868b;
+    --apple-text-tertiary: #6e6e73;
+    --apple-border: rgba(0, 0, 0, 0.08);
+    --apple-border-subtle: rgba(0, 0, 0, 0.04);
+    --apple-brand: #f05023;
+    --apple-brand-hover: #e04418;
+    --apple-brand-light: rgba(240, 80, 35, 0.08);
+    --apple-success: #34c759;
+    --apple-warning: #ff9500;
   }
 
-  body {
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    color: #191c1e;
-    background-color: #f7f9fb;
+  html.dark,
+  body.dark {
+    --apple-bg: #121214;
+    --apple-surface: #1c1c1e;
+    --apple-text-primary: #f5f5f7;
+    --apple-text-secondary: #86868b;
+    --apple-text-tertiary: #a1a1a6;
+    --apple-border: rgba(255, 255, 255, 0.1);
+    --apple-border-subtle: rgba(255, 255, 255, 0.06);
+    color-scheme: dark;
+  }
+
+  html {
+    scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", system-ui, sans-serif;
+    color: var(--apple-text-primary);
+    background-color: var(--apple-bg);
+    letter-spacing: -0.011em;
+  }
+
   h1, h2, h3, h4, h5, h6, .font-display {
-    font-family: 'Outfit', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Outfit", system-ui, sans-serif;
+    letter-spacing: -0.022em;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
   * {
@@ -22,15 +54,79 @@
   }
 }
 
+/* Apple-style elevation and shadows */
+.apple-card {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03), 0 16px 36px -12px rgba(0, 0, 0, 0.05);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.apple-card:hover {
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06), 0 24px 48px -12px rgba(0, 0, 0, 0.08);
+}
+
+.apple-glass {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.apple-glass-dark {
+  background: rgba(22, 22, 23, 0.82);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Apple micro-interaction active press */
+.apple-press {
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease;
+}
+
+.apple-press:active {
+  transform: scale(0.97);
+}
+
+/* Apple pill button */
+.apple-pill-primary {
+  background: linear-gradient(180deg, #c94a10 0%, #c2410c 100%);
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(194, 65, 12, 0.25);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.apple-pill-primary:hover {
+  background: linear-gradient(180deg, #b43b0b 0%, #9a3412 100%);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12), 0 10px 24px rgba(154, 52, 18, 0.35);
+  transform: translateY(-0.5px) scale(1.02);
+}
+
+.apple-pill-primary:active {
+  transform: scale(0.97);
+}
+
+.apple-pill-secondary {
+  background: rgba(0, 0, 0, 0.05);
+  color: #1d1d1f;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.apple-pill-secondary:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
 /* Tabular numbers for clean prices and badges */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
 
-/* Custom sleek scrollbar */
+/* Apple minimal scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -38,15 +134,14 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: rgba(0, 0, 0, 0.16);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: rgba(0, 0, 0, 0.28);
 }
 
-/* Utility: hide scrollbars */
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -56,44 +151,202 @@
   display: none;
 }
 
-/* Keyframes & Animation helpers */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.animate-in {
-  animation-duration: 180ms;
-  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-  animation-fill-mode: both;
-}
-
-.fade-in {
-  animation-name: fadeIn;
-}
-
-.zoom-in {
-  animation-name: scaleIn;
-}
-
-/* Mobile safe area padding utility */
+/* Mobile safe area */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Accessibility: Font Size Scalers */
+html.font-size-large {
+  font-size: 112%;
+}
+
+html.font-size-extralarge {
+  font-size: 125%;
+}
+
+/* Accessibility: High Contrast */
+html.high-contrast {
+  --apple-border: rgba(0, 0, 0, 0.4);
+}
+
+html.high-contrast body {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+}
+
+html.high-contrast .apple-card {
+  border: 2px solid #000000 !important;
+  box-shadow: none !important;
+}
+
+/* Accessibility: Colorblind Filters using SVG filters from index.html */
+html.colorblind-protanopia,
+html.colorblind-protanopia #root {
+  filter: url('#protanopia-filter') !important;
+}
+
+html.colorblind-deuteranopia,
+html.colorblind-deuteranopia #root {
+  filter: url('#deuteranopia-filter') !important;
+}
+
+html.colorblind-tritanopia,
+html.colorblind-tritanopia #root {
+  filter: url('#tritanopia-filter') !important;
+}
+
+html.colorblind-monochrome,
+html.colorblind-monochrome #root {
+  filter: grayscale(100%) !important;
+}
+
+/* =========================================================================
+   COMPREHENSIVE DARK MODE OVERRIDES (Afecta toda la web)
+   ========================================================================= */
+
+html.dark body,
+body.dark {
+  background-color: #121214 !important;
+  color: #f5f5f7 !important;
+}
+
+/* Base Surfaces in Dark Mode */
+html.dark .bg-white,
+body.dark .bg-white {
+  background-color: #1c1c1e !important;
+  color: #f5f5f7;
+}
+
+html.dark .bg-\[\#f5f5f7\],
+body.dark .bg-\[\#f5f5f7\],
+html.dark .bg-\[\#f5f5f7\]\/60,
+body.dark .bg-\[\#f5f5f7\]\/60,
+html.dark .bg-\[\#f5f5f7\]\/70,
+body.dark .bg-\[\#f5f5f7\]\/70,
+html.dark .bg-\[\#f5f5f7\]\/80,
+body.dark .bg-\[\#f5f5f7\]\/80,
+html.dark .bg-\[\#f4f4f5\],
+body.dark .bg-\[\#f4f4f5\],
+html.dark .bg-\[\#fafafc\],
+body.dark .bg-\[\#fafafc\] {
+  background-color: #252528 !important;
+  color: #f5f5f7;
+}
+
+/* Dark mode text colors */
+html.dark .text-\[\#1d1d1f\],
+body.dark .text-\[\#1d1d1f\],
+html.dark .text-\[\#18181b\],
+body.dark .text-\[\#18181b\],
+html.dark .text-\[\#191c1e\],
+body.dark .text-\[\#191c1e\] {
+  color: #f5f5f7 !important;
+}
+
+html.dark .text-\[\#6e6e73\],
+body.dark .text-\[\#6e6e73\] {
+  color: #a1a1a6 !important;
+}
+
+html.dark .text-\[\#86868b\],
+body.dark .text-\[\#86868b\] {
+  color: #98989d !important;
+}
+
+/* Subtle borders in dark mode */
+html.dark .border-black\/\[0\.04\],
+body.dark .border-black\/\[0\.04\],
+html.dark .border-black\/\[0\.05\],
+body.dark .border-black\/\[0\.05\],
+html.dark .border-black\/\[0\.06\],
+body.dark .border-black\/\[0\.06\],
+html.dark .border-black\/\[0\.08\],
+body.dark .border-black\/\[0\.08\],
+html.dark .border-black\/\[0\.1\],
+body.dark .border-black\/\[0\.1\],
+html.dark .border-black\/\[0\.12\],
+body.dark .border-black\/\[0\.12\],
+html.dark .border-black\/\[0\.15\],
+body.dark .border-black\/\[0\.15\] {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Inputs, textareas, selects in Dark Mode */
+html.dark input:not([type="checkbox"]):not([type="radio"]),
+body.dark input:not([type="checkbox"]):not([type="radio"]),
+html.dark textarea,
+body.dark textarea,
+html.dark select,
+body.dark select {
+  background-color: #2c2c2e !important;
+  color: #f5f5f7 !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+html.dark input::placeholder,
+body.dark input::placeholder,
+html.dark textarea::placeholder,
+body.dark textarea::placeholder {
+  color: #86868b !important;
+}
+
+/* Cards & Glass in Dark Mode */
+html.dark .apple-card,
+body.dark .apple-card {
+  background: #1c1c1e !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4) !important;
+}
+
+html.dark .apple-glass,
+body.dark .apple-glass {
+  background: rgba(28, 28, 30, 0.85) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+html.dark .apple-pill-secondary,
+body.dark .apple-pill-secondary {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
+html.dark .hover\:bg-black\/\[0\.05\]:hover,
+body.dark .hover\:bg-black\/\[0\.05\]:hover,
+html.dark .hover\:bg-black\/\[0\.08\]:hover,
+body.dark .hover\:bg-black\/\[0\.08\]:hover,
+html.dark .hover\:bg-black\/\[0\.1\]:hover,
+body.dark .hover\:bg-black\/\[0\.1\]:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+html.dark .bg-black\/\[0\.05\],
+body.dark .bg-black\/\[0\.05\],
+html.dark .bg-black\/\[0\.04\],
+body.dark .bg-black\/\[0\.04\],
+html.dark .bg-black\/\[0\.06\],
+body.dark .bg-black\/\[0\.06\] {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+
+/* ---- Accesibilidad global (WCAG): foco visible por teclado ---- */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid #c2410c;
+  outline-offset: 2px;
+}
+html.dark :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline-color: #ffb08a;
+}
+
+/* Respeta la preferencia de movimiento reducido del sistema */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

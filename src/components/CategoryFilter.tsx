@@ -47,31 +47,33 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
   onSelectCategory,
 }) => {
   return (
-    <div className="mb-6">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-slate-800 tracking-wide uppercase">
-          Especialidades & Oficios
-        </h3>
-        <span className="text-xs text-slate-500">
-          Precios regulados y visita garantizada
+    <div className="mb-7">
+      <div className="flex items-center justify-between mb-3 px-1">
+        <div>
+          <h3 className="text-xs font-semibold text-[#86868b] tracking-wider uppercase">
+            Especialidades & Oficios
+          </h3>
+        </div>
+        <span className="text-xs text-[#86868b]">
+          Tarifas reguladas y visita protegida
         </span>
       </div>
 
-      {/* Horizontal scroller on mobile, clean flex-wrap on desktop */}
+      {/* Apple-style horizontal scrollable pill row */}
       <div
         role="group"
         aria-label="Filtrar por oficio"
-        className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none"
+        className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0"
       >
         <button
           type="button"
           onClick={() => onSelectCategory('all')}
           aria-pressed={selectedCategory === 'all'}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer shrink-0 border ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer shrink-0 border ${
             selectedCategory === 'all'
-              ? 'bg-[#0f172a] text-white border-[#0f172a] shadow-sm'
-              : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-          }`}
+              ? 'bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] border-[#1d1d1f] dark:border-white shadow-[0_4px_12px_rgba(0,0,0,0.15)] scale-[1.02]'
+              : 'bg-white dark:bg-[#1c1c1e] text-[#1d1d1f] dark:text-[#f5f5f7] border-black/[0.06] dark:border-white/[0.08] hover:border-black/[0.12] dark:hover:border-white/[0.16] hover:bg-[#fafafc] dark:hover:bg-[#252528] shadow-[0_1px_3px_rgba(0,0,0,0.02)]'
+          } apple-press`}
         >
           <LayoutGrid className="w-4 h-4" />
           <span>Todos los Oficios</span>
@@ -85,13 +87,13 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
               key={cat.id}
               onClick={() => onSelectCategory(cat.id)}
               aria-pressed={isSelected}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer shrink-0 border ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer shrink-0 border ${
                 isSelected
-                  ? 'bg-[#ea580c] text-white border-[#ea580c] shadow-sm'
-                  : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-              }`}
+                  ? 'bg-[#f05023] text-white border-[#f05023] shadow-[0_4px_14px_rgba(240,80,35,0.3)] scale-[1.02]'
+                  : 'bg-white dark:bg-[#1c1c1e] text-[#1d1d1f] dark:text-[#f5f5f7] border-black/[0.06] dark:border-white/[0.08] hover:border-black/[0.12] dark:hover:border-white/[0.16] hover:bg-[#fafafc] dark:hover:bg-[#252528] shadow-[0_1px_3px_rgba(0,0,0,0.02)]'
+              } apple-press`}
             >
-              <span className={isSelected ? 'text-white' : 'text-slate-500'}>
+              <span className={isSelected ? 'text-white' : 'text-[#86868b] dark:text-[#a1a1a6]'}>
                 {getCategoryIcon(cat.icon)}
               </span>
               <span>{cat.name}</span>
