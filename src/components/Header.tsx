@@ -24,10 +24,11 @@ interface HeaderProps {
   onOpenEmergency: () => void;
   onOpenNeedWorker: () => void;
   isWorkerMode: boolean;
-  onToggleWorkerMode: () => void;
   currentUser: UserSession | null;
   onOpenAuth: () => void;
   onLogout: () => void;
+  registeredWorkersCount?: number;
+  onlineWorkersCount?: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -40,10 +41,11 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenEmergency: _onOpenEmergency,
   onOpenNeedWorker,
   isWorkerMode,
-  onToggleWorkerMode,
   currentUser,
   onOpenAuth,
   onLogout,
+  registeredWorkersCount = 5,
+  onlineWorkersCount = 4,
 }) => {
   const selectedCityObj = cities.find((c) => c.id === currentCity) || cities[0];
 
@@ -61,15 +63,31 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Apple Micro Status Bar */}
       <div className="bg-[#161617] text-[#86868b] px-4 py-1.5 text-xs border-b border-white/[0.08]">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#34c759] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#34c759]"></span>
-            </span>
-            <span className="font-medium text-[#d2d2d7] text-[11px] sm:text-xs">
-              480+ técnicos verificados en{' '}
-              <strong className="text-white font-semibold">{selectedCityObj.name}</strong>
-            </span>
+          <div className="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs">
+            {/* Trabajadores Registrados */}
+            <div className="flex items-center gap-1 text-[#d2d2d7]">
+              <span>
+                Trabajadores registrados:{' '}
+                <strong className="text-[#ffaa00] font-bold font-mono">{registeredWorkersCount}</strong>
+              </span>
+              <span className="hidden sm:inline text-[#86868b]">
+                en <strong className="text-white font-medium">{selectedCityObj.name}</strong>
+              </span>
+            </div>
+
+            <span className="text-white/20">|</span>
+
+            {/* En Línea */}
+            <div className="flex items-center gap-1.5">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#34c759] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#34c759]"></span>
+              </span>
+              <span className="text-[#d2d2d7]">
+                En Línea:{' '}
+                <strong className="text-[#34c759] font-bold font-mono">{onlineWorkersCount}</strong>
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center gap-2.5 sm:gap-4">
@@ -95,24 +113,6 @@ export const Header: React.FC<HeaderProps> = ({
                 <ChevronDown className="w-3 h-3 text-[#86868b] absolute right-2 pointer-events-none" />
               </div>
             </div>
-
-            {/* Mode switch button */}
-            <button
-              onClick={onToggleWorkerMode}
-              className={`flex items-center gap-1.5 text-[11px] sm:text-xs px-2.5 py-1 rounded-full transition-all cursor-pointer border active:scale-[0.98] ${
-                isWorkerMode
-                  ? 'bg-[#ff9500]/20 text-[#ffaa00] border-[#ff9500]/40 font-bold'
-                  : 'text-[#f5f5f7] hover:text-white bg-white/[0.06] hover:bg-white/[0.12] border-white/[0.06]'
-              }`}
-            >
-              <HardHat className="w-3 h-3 text-[#ff9500]" />
-              <span className="hidden sm:inline font-medium">
-                {isWorkerMode ? 'Modo Cliente' : 'Soy Técnico'}
-              </span>
-              <span className="sm:hidden font-medium">
-                {isWorkerMode ? 'Cliente' : 'Técnico'}
-              </span>
-            </button>
           </div>
         </div>
       </div>

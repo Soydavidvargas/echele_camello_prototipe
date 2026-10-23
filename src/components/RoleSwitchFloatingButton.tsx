@@ -6,19 +6,21 @@ interface RoleSwitchFloatingButtonProps {
   isLoggedIn: boolean;
   currentUserRole?: 'client' | 'worker' | 'admin';
   hasWorkerProfile: boolean;
+  isWorkerMode?: boolean;
   onSwitchToWorker: () => void;
   onSwitchToClient: () => void;
 }
 
 export const RoleSwitchFloatingButton: React.FC<RoleSwitchFloatingButtonProps> = ({
   currentTab,
-  isLoggedIn,
-  currentUserRole,
+  isLoggedIn: _isLoggedIn,
+  currentUserRole: _currentUserRole,
   hasWorkerProfile,
+  isWorkerMode,
   onSwitchToWorker,
   onSwitchToClient,
 }) => {
-  const isWorkerTab = currentTab === 'worker_mode';
+  const isWorkerTab = isWorkerMode !== undefined ? isWorkerMode : currentTab === 'worker_mode';
   const [showTooltip, setShowTooltip] = useState(false);
 
   return (

@@ -25,7 +25,6 @@ import {
   CITIES,
   CATEGORIES,
   TECHNICIANS as FALLBACK_TECHNICIANS,
-  INITIAL_ACTIVE_JOB,
   AVAILABLE_OPPORTUNITIES as FALLBACK_OPPORTUNITIES,
   SPONSORED_ADS,
 } from './data/mockData';
@@ -145,26 +144,41 @@ export default function App() {
   const [maxPriceCOP, setMaxPriceCOP] = useState<number>(10000000);
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('all');
 
-  // Data from MySQL / API & LocalStorage
+  // Data from MySQL / API & LocalStorage: 5 técnicos base, sin compras falsas ni datos inventados
   const [techniciansList, setTechniciansList] = useState<Technician[]>(FALLBACK_TECHNICIANS);
-  const [activeJobs, setActiveJobs] = useState<ActiveJob[]>([INITIAL_ACTIVE_JOB]);
-  const [selectedJobId, setSelectedJobId] = useState<string>(INITIAL_ACTIVE_JOB.id);
+  const [activeJobs, setActiveJobs] = useState<ActiveJob[]>(() => {
+    try {
+      const saved = localStorage.getItem('echele_camello_active_jobs');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [selectedJobId, setSelectedJobId] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('echele_camello_active_jobs');
+      const list = saved ? JSON.parse(saved) : [];
+      return list[0]?.id || '';
+    } catch {
+      return '';
+    }
+  });
   const [opportunities, setOpportunities] = useState<AvailableOpportunity[]>(() => {
     try {
       const saved = localStorage.getItem('echele_camello_opportunities');
-      return saved ? JSON.parse(saved) : FALLBACK_OPPORTUNITIES;
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return FALLBACK_OPPORTUNITIES;
+      return [];
     }
   });
 
-  // Anuncios Patrocinados para la Sección Dorada
+  // Anuncios Patrocinados para la Sección Dorada (solo los que el técnico realmente publique y pague)
   const [workerAds, setWorkerAds] = useState<WorkerAd[]>(() => {
     try {
       const saved = localStorage.getItem('echele_camello_worker_ads');
-      return saved ? JSON.parse(saved) : SPONSORED_ADS;
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return SPONSORED_ADS;
+      return [];
     }
   });
 
@@ -641,7 +655,13 @@ export default function App() {
 
   // Handler: New Job created & saved to MySQL
   const handleJobCreated = async (newJob: ActiveJob) => {
-    setActiveJobs((prev) => [newJob, ...prev]);
+    setActiveJobs((prev) => {
+      const updated = [newJob, ...prev];
+      try {
+        localStorage.setItem('echele_camello_active_jobs', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
     setSelectedJobId(newJob.id);
     setActiveTab('active_jobs');
 
@@ -666,9 +686,13 @@ export default function App() {
 
   // Handler: Update active job status in MySQL
   const handleUpdateJobStatus = async (newStatus: JobStatus) => {
-    setActiveJobs((prev) =>
-      prev.map((j) => (j.id === selectedJobId ? { ...j, status: newStatus } : j))
-    );
+    setActiveJobs((prev) => {
+      const updated = prev.map((j) => (j.id === selectedJobId ? { ...j, status: newStatus } : j));
+      try {
+        localStorage.setItem('echele_camello_active_jobs', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
     try {
       await apiService.updateJobStatus(selectedJobId, newStatus);
     } catch (e) {}
@@ -732,9 +756,13 @@ export default function App() {
 
   // Handler: Finish and rate job
   const handleFinishJob = async (jobId: string, rating: number, comment: string) => {
-    setActiveJobs((prev) =>
-      prev.map((j) => (j.id === jobId ? { ...j, status: 'completado' } : j))
-    );
+    setActiveJobs((prev) => {
+      const updated = prev.map((j) => (j.id === jobId ? { ...j, status: 'completado' as JobStatus } : j));
+      try {
+        localStorage.setItem('echele_camello_active_jobs', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
     try {
       await apiService.updateJobStatus(jobId, 'completado');
     } catch (e) {}
@@ -743,7 +771,13 @@ export default function App() {
   // Handler: Worker accepts opportunity in MySQL
   const handleAcceptOpportunity = async (opp: AvailableOpportunity) => {
     // Remove from local radar
-    setOpportunities((prev) => prev.filter((o) => o.id !== opp.id));
+    setOpportunities((prev) => {
+      const updated = prev.filter((o) => o.id !== opp.id);
+      try {
+        localStorage.setItem('echele_camello_opportunities', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
 
     try {
       await apiService.acceptOpportunity(opp.id);
@@ -760,7 +794,7 @@ export default function App() {
       address: `Sector ${opp.neighborhood}, ${opp.city}`,
       city: opp.city,
       neighborhood: opp.neighborhood,
-      scheduledTime: 'Inmediato (Aceptado por Don Jairo)',
+      scheduledTime: 'Inmediato (Aceptado)',
       status: 'en_camino',
       etaMinutes: 15,
       createdAt: 'Aceptado recién',
@@ -777,7 +811,13 @@ export default function App() {
       ],
     };
 
-    setActiveJobs((prev) => [workerJob, ...prev]);
+    setActiveJobs((prev) => {
+      const updated = [workerJob, ...prev];
+      try {
+        localStorage.setItem('echele_camello_active_jobs', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
     setSelectedJobId(workerJob.id);
     setActiveTab('active_jobs');
   };
@@ -844,18 +884,6 @@ export default function App() {
         onOpenEmergency={handleOpenEmergency}
         onOpenNeedWorker={() => setIsNeedWorkerModalOpen(true)}
         isWorkerMode={isWorkerMode}
-        onToggleWorkerMode={() => {
-          if (!currentUser && !isWorkerMode) {
-            setAuthDefaultRole('worker');
-            setIsAuthModalOpen(true);
-            return;
-          }
-          if (isWorkerMode) {
-            handleSwitchToClient();
-          } else {
-            handleSwitchToWorker();
-          }
-        }}
         currentUser={currentUser}
         onOpenAuth={() => setIsAuthModalOpen(true)}
         onLogout={handleLogout}
@@ -1295,18 +1323,20 @@ export default function App() {
        </MotionConfig>
       </main>
 
+
       {/* 2.5 Botón flotante para alternar entre Cliente y Trabajador (Encima del Bot) */}
       <RoleSwitchFloatingButton
         currentTab={activeTab}
         isLoggedIn={!!currentUser}
         currentUserRole={currentUser?.role}
         hasWorkerProfile={hasWorkerProfile}
+        isWorkerMode={isWorkerMode}
         onSwitchToWorker={handleSwitchToWorker}
         onSwitchToClient={handleSwitchToClient}
       />
 
       {/* 3. Floating Action Bot "El Camello" */}
-      <ElCamelloBot mode={activeTab === 'worker_mode' ? 'worker' : 'client'} />
+      <ElCamelloBot mode={isWorkerMode ? 'worker' : 'client'} />
 
       {/* Footer */}
       <Footer
